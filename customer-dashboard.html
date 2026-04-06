@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CampusBites - Customer Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="min-h-screen bg-gray-100">
+
+  <nav class="bg-white border-b border-gray-200 shadow-sm">
+    <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center h-16">
+      <header class="flex items-center gap-2">
+        <i data-lucide="utensils" class="w-7 h-7 text-indigo-600"></i>
+        <span class="text-xl font-bold text-gray-900">CampusBites</span>
+      </header>
+
+      <section class="flex items-center gap-6">
+        <a href="index.html" class="text-gray-700 hover:text-indigo-600">Home</a>
+        <a href="login.html" class="text-gray-700 hover:text-indigo-600">Log Out</a>
+      </section>
+    </section>
+  </nav>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    <header class="mb-10">
+  <section class="flex items-center justify-between">
+    <h1 class="text-3xl md:text-4xl font-bold text-gray-900">
+      Customer Dashboard
+    </h1>
+
+    <a
+      href="#"
+      class="bg-indigo-600 text-white px-5 py-2 rounded-lg font-semibold hover:bg-indigo-700 transition"
+    >
+      Place Order
+    </a>
+  </section>
+
+  <p class="mt-2 text-gray-600">
+    Browse vendors, place orders, and track your meals in one place.
+  </p>
+</header>
+
+    <section class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+      <article class="bg-white rounded-2xl shadow-md p-6">
+        <header class="flex items-center gap-3 mb-4">
+          <i data-lucide="store" class="w-6 h-6 text-indigo-600"></i>
+          <h2 class="text-xl font-semibold text-gray-900">Browse Vendors</h2>
+        </header>
+        <p class="text-gray-600 mb-4">
+          Explore different campus food vendors and see what is available today.
+        </p>
+        <a href="#" class="inline-block text-indigo-600 font-semibold hover:underline">
+          View Vendors
+        </a>
+      </article>
+
+      <article class="bg-white rounded-2xl shadow-md p-6">
+        <header class="flex items-center gap-3 mb-4">
+          <i data-lucide="shopping-bag" class="w-6 h-6 text-indigo-600"></i>
+          <h2 class="text-xl font-semibold text-gray-900">My Orders</h2>
+        </header>
+        <p class="text-gray-600 mb-4">
+          Check the status of your recent and active orders.
+        </p>
+        <a href="#" class="inline-block text-indigo-600 font-semibold hover:underline">
+          Track Orders
+        </a>
+      </article>
+
+      <article class="bg-white rounded-2xl shadow-md p-6">
+        <header class="flex items-center gap-3 mb-4">
+          <i data-lucide="credit-card" class="w-6 h-6 text-indigo-600"></i>
+          <h2 class="text-xl font-semibold text-gray-900">Payments</h2>
+        </header>
+        <p class="text-gray-600 mb-4">
+          View payment history and manage your completed transactions.
+        </p>
+        <a href="#" class="inline-block text-indigo-600 font-semibold hover:underline">
+          Payment History
+        </a>
+      </article>
+      
+      <article class="bg-white rounded-2xl shadow-md p-6">
+        <header class="flex items-center gap-3 mb-4">
+          <i data-lucide="history" class="w-6 h-6 text-indigo-600"></i>
+          <h2 class="text-xl font-semibold text-gray-900">Recent Order Activity</h2>
+        </header>
+        <p class="text-gray-600 mb-4">
+          View recently ordered and order again!
+        </p>
+        <a href="#" class="inline-block text-indigo-600 font-semibold hover:underline">
+          Order History
+        </a>
+      </article>
+
+    </section>
+
+    <section class="mb-10">
+      <header class="mb-6">
+        <h2 class="text-2xl font-bold text-gray-900">Recommended Vendors</h2>
+        <p class="text-gray-600">Popular spots around campus right now.</p>
+      </header>
+
+      <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <article class="bg-white rounded-2xl shadow-md overflow-hidden">
+          <img src="assets/jim.jpg" alt="Jimmy's food stall" class="w-full h-48 object-cover object-top" />
+          <section class="p-6">
+            <h3 class="text-xl font-semibold text-gray-900 mb-2">Jimmy's</h3>
+            <p class="text-sm text-gray-500 mb-2">Fast Food • Matrix Ground Floor</p>
+            <p class="text-gray-600">Burgers, fries and grilled meals.</p>
+          </section>
+        </article>
+
+      </section>
+    </section>
+
+  </main>
+
+  <script>
+    lucide.createIcons();
+  </script>
+</body>
+</html>

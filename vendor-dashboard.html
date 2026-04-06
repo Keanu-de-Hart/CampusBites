@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CampusBites - Vendor Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="min-h-screen bg-gray-100">
+
+  <nav class="bg-white border-b border-gray-200 shadow-sm">
+    <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center h-16">
+      <header class="flex items-center gap-2">
+        <i data-lucide="utensils" class="w-7 h-7 text-indigo-600"></i>
+        <span class="text-xl font-bold text-gray-900">CampusBites</span>
+      </header>
+
+      <section class="flex items-center gap-6">
+        <a href="index.html" class="text-gray-700 hover:text-indigo-600">Home</a>
+        <a href="login.html" class="text-gray-700 hover:text-indigo-600">Log Out</a>
+      </section>
+    </section>
+  </nav>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    <header class="mb-10">
+      <h1 class="text-3xl md:text-4xl font-bold text-gray-900">Vendor Dashboard</h1>
+      <p class="mt-2 text-gray-600">
+        Manage your menu, view incoming orders, and track vendor performance.
+      </p>
+    </header>
+
+    <section class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+      <article class="bg-white rounded-2xl shadow-md p-6">
+        <header class="flex items-center gap-3 mb-4">
+          <i data-lucide="clipboard-list" class="w-6 h-6 text-indigo-600"></i>
+          <h2 class="text-xl font-semibold text-gray-900">Incoming Orders</h2>
+        </header>
+        <p class="text-gray-600 mb-4">
+          Review new orders and update preparation progress.
+        </p>
+        <a href="#" class="inline-block text-indigo-600 font-semibold hover:underline">
+          Manage Orders
+        </a>
+      </article>
+
+      <article class="bg-white rounded-2xl shadow-md p-6">
+        <header class="flex items-center gap-3 mb-4">
+          <i data-lucide="menu-square" class="w-6 h-6 text-indigo-600"></i>
+          <h2 class="text-xl font-semibold text-gray-900">Menu Management</h2>
+        </header>
+        <p class="text-gray-600 mb-4">
+          Add items, edit prices, and update availability.
+        </p>
+        <a href="#" class="inline-block text-indigo-600 font-semibold hover:underline">
+          Update Menu
+        </a>
+      </article>
+
+      <article class="bg-white rounded-2xl shadow-md p-6">
+        <header class="flex items-center gap-3 mb-4">
+          <i data-lucide="bar-chart-3" class="w-6 h-6 text-indigo-600"></i>
+          <h2 class="text-xl font-semibold text-gray-900">Sales Overview</h2>
+        </header>
+        <p class="text-gray-600 mb-4">
+          Track sales and see how you are performing.
+        </p>
+        <a href="#" class="inline-block text-indigo-600 font-semibold hover:underline">
+          View Analytics
+        </a>
+      </article>
+    </section>
+
+    <section class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-10">
+      <section class="bg-white rounded-2xl shadow-md p-6">
+        <header class="mb-6">
+          <h2 class="text-2xl font-bold text-gray-900">Today’s Orders</h2>
+        </header>
+
+      </section>
+
+      <section class="bg-white rounded-2xl shadow-md p-6">
+        <header class="mb-6">
+          <h2 class="text-2xl font-bold text-gray-900">Quick Stats</h2>
+        </header>
+
+        <article class="border-b border-gray-200 pb-4 mb-4">
+          <h3 class="font-semibold text-gray-900">Orders Today</h3>
+        </article>
+
+        <article class="border-b border-gray-200 pb-4 mb-4">
+          <h3 class="font-semibold text-gray-900">Popular Item</h3>
+        </article>
+
+        <article>
+          <h3 class="font-semibold text-gray-900">Current Sold Out</h3>
+        </article>
+      </section>
+    </section>
+
+    <section class="bg-white rounded-2xl shadow-md p-6">
+  <header class="mb-6">
+    <h2 class="text-2xl font-bold text-gray-900">Menu</h2>
+  </header>
+
+  <section>
+    <article class="py-4 border-b border-gray-200">
+      <header class="flex justify-between items-center mb-1">
+        <h3 class="text-lg font-semibold text-gray-900">Insert meal</h3>
+        <p class="text-lg font-semibold text-indigo-600">R##</p>
+      </header>
+      <p class="text-gray-600">Meal description.</p>
+    </article>
+
+  </section>
+</section>
+  </main>
+
+  <script>
+    lucide.createIcons();
+  </script>
+</body>
+</html>
