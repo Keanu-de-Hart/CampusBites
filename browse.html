@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>CampusBites - Browse</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+    <nav class="fixed bg-white w-full z-50 glass-effect border-b border-gray-200">
+        <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between h-16 items-center">
+            <header class="flex items-center gap-2 cursor-pointer">
+                <i data-lucide="utensils" class="w-8 h-8 text-indigo-600"></i>
+                <span class="text-xl font-bold text-gray-900">CampusBites</span>
+            </header>
+            <section class="md:flex space-x-8">
+                <a href="index.html" class="text-gray-700 hover:text-indigo-600">Home</a>
+                <a href="browse.html" class="text-gray-700 hover:text-indigo-600">Browse</a>
+            </section>
+            <section class="flex items-center gap-4">
+                <a href="login.html" class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition">
+                    Sign in
+                </a>
+            </section>
+
+        </section>
+    </nav>
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-8">
+        <section class="flex flex-col md:flex-row gap-6">
+            <!--Sidebar Filters-->
+            <aside class="w-full md:w-64 space-y-6">
+                <section class="bg-white p-4 rounded-xl shadow-sm">
+                    <h3 class="font-semibold mb-4 flex items-center gap-2">
+                        <i data-lucide="filter" class="w-4 h-4"></i> Filters
+                    </h3>
+                    <section class="mb-4">
+                        <label class="text-sm font-medium text-gray-700 mb-2 block">Vendor</label>
+                        <select class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                            <option>All Vendors</option>
+                            <option>Expresso</option>
+                            <option>Jimmy's</option>
+                            <option>Vendor C</option>
+                        </select>
+                    </section>
+                    <!--Category Filter-->
+                    <section class="mb-4">
+                        <label class="text-sm font-medium text-gray-700 mb-2 block">Category</label>
+                        <select class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                            <option>All Categories</option>
+                            <option>Burgers</option>
+                            <option>Salads</option>
+                            <option>Sides</option>
+                            <option>Healthy</option>
+                        </select>
+                    </section>
+
+                    <!--Dietary Filter-->
+                    <section class="mb-4">
+                        <label class="text-sm font-medium text-gray-700 mb-2 block">Dietary</label>
+                        <section class="space-y-2">
+                            <label class="flex items-center gap-2 text-sm">
+                                <input type="checkbox" class="rounded text-green-600">Vegan
+                            </label>                            
+                            <label class="flex items-center gap-2 text-sm">
+                                <input type="checkbox" class="rounded text-green-600">Vegetarian
+                            </label>
+                            <label class="flex items-center gap-2 text-sm">
+                                <input type="checkbox" class="rounded text-green-600">Gluten-Free
+                            </label>                            
+                            <label class="flex items-center gap-2 text-sm">
+                                <input type="checkbox" class="rounded text-green-600">Halal
+                            </label>
+                        </section>
+                    </section>
+                    <!-- Price Filter-->
+                     <section>
+                        <label class="text-sm font-medium text-gray-700 mb-2 block">
+                            Max Price: R200
+                        </label>
+                        <input type="range" min="0" max="200" value="200" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                     </section>
+                     <!--Info-->
+                     <section class="bg-indigo-50 p-4 rounded-xl">
+                        <h4 class="text-sm font-semibold text-indigo-900 mb-2">Allergen Information</h4>
+                        <p class="text-xs text-indigo-700">
+                             All menu items comply with SA Regulation R.146 of 2010 regarding allergen declaration.
+                        </p>
+                    </section>
+                </section>
+            </aside>
+        </section>
+    </main>
+</body>
+<script>
+  lucide.createIcons();
+</script>
+</html>
