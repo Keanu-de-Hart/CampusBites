@@ -32,7 +32,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const allergentext = document.getElementById("allergenText");
   const allergencheckboxes = allergenmenu.querySelectorAll(".allergen-option");
 
-  // toggle dropdown
+  // allergen dropdown
   allergenBtn.addEventListener("click", (e) => {
     e.stopPropagation();
     allergenmenu.classList.toggle("hidden");
@@ -58,14 +58,13 @@ document.addEventListener("DOMContentLoaded", () => {
   const diettext = document.getElementById("specialdietText");
   const dietcheckboxes = dietmenu.querySelectorAll(".specialdiet-option");
 
-  // toggle dropdown
+  // dietary preferences dropdown
   dietbtn.addEventListener("click", (e) => {
     e.stopPropagation();
     dietmenu.classList.toggle("hidden");
   });
 
  
-
   // update selected text
   dietcheckboxes.forEach(cb => {
     cb.addEventListener("change", () => {
