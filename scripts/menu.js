@@ -33,7 +33,7 @@ auth.onAuthStateChanged(async (user) => {
   } else {
     // Optional: Redirect to login if no user is found
     console.log("No user is signed in.");
-    window.location.href = "login.html"; // redirect to login page
+    window.location.href = "index.html"; // redirect to homepage page
   }
 });
 
