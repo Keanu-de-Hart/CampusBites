@@ -10,6 +10,7 @@ export function initAuthUI() {
     const logoutBtn = document.getElementById("logoutBtn");
 
   onAuthStateChanged(auth, async (user) => {
+    if (user) {
     const userRef = doc(db, "users", user.uid);
     const userSnap = await getDoc(userRef);
 
@@ -24,12 +25,14 @@ export function initAuthUI() {
       logoutBtn?.classList.remove("hidden");
       loginBtn?.classList.add("hidden");
 
-    } else {
+    } }
+    else {
       // ❌ User is NOT logged in
       CustomerdashboardLink?.classList.add("hidden");
       VendordashboardLink?.classList.add("hidden");
       logoutBtn?.classList.add("hidden");
       loginBtn?.classList.remove("hidden");
+      console.log("User is not logged in.");
     }
   });
 }
