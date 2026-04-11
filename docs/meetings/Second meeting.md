@@ -72,5 +72,4 @@
 ---
  
 ## Evidence
- 
-![meeting screenshot](2nd meeting screenshot.jpeg)
+![Meeting screenshot](assets/meeting_screenshot.jpeg)
