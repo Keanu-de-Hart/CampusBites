@@ -73,4 +73,4 @@
  
 ## Evidence
  
-Screenshots of the WhatsApp discussion are attached in the `/docs/meetings` folder.
+![meeting screenshot](2nd meeting screenshot.jpeg)
