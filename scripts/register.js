@@ -138,7 +138,7 @@ function redirectUser(role) {
     window.location.href = "admin-dashboard.html";
   }
 }
-const roleSelect = document.getElementById("role");
+const roleSelect = document.getElementById("registerRole");
 const shopContainer = document.getElementById("shop-name-container");
 
 roleSelect.addEventListener("change", () => {
