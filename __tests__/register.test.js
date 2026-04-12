@@ -1,3 +1,4 @@
+global.lucide = { createIcons: jest.fn() };
 jest.mock('../scripts/database.js', () => ({
   auth: {},
   db: {},
