@@ -47,7 +47,7 @@ form.addEventListener("submit", async (e) => {
     if (role === "customer") {
       window.location.href = "index.html";
     } else if (role === "vendor") {
-      window.location.href = "index.html"; // change later to vendor dashboard
+      window.location.href = "vendor-dashboard.html"; // change later to vendor dashboard
     } else if (role === "admin") {
       window.location.href = "index.html"; // change later to admin dashboard
     } else {

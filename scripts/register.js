@@ -4,6 +4,7 @@ import {
   createUserWithEmailAndPassword,
   doc,
   setDoc,
+  getDoc,
   signInWithPopup,
   GoogleAuthProvider,
   FacebookAuthProvider,
