@@ -9,11 +9,15 @@
  
 ## Attendees
  
-- Shazmeen
-- Yusra
-- Mpilo
-- Keanu
-- Mika
+Shazmeen
+
+Yusra
+
+Mpilo
+
+Keanu
+
+Mika
  
 ---
  
