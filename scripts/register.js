@@ -23,6 +23,7 @@ form.addEventListener("submit", async (e) => {
   const email = document.getElementById("registerEmail").value;
   const password = document.getElementById("registerPassword").value;
   const role = document.getElementById("registerRole").value;
+  const shopName = document.getElementById("shop-name").value;
 
   try {
     // 1. create user in Firebase Auth
@@ -34,7 +35,8 @@ form.addEventListener("submit", async (e) => {
     await setDoc(doc(db, "users", user.uid), {
       fullName: fullName,
       email: email,
-      role: role
+      role: role,
+      shopName: role === "vendor" ? shopName : null
     });
 
     console.log("User registered and saved:", user.uid);
@@ -137,3 +139,13 @@ function redirectUser(role) {
     window.location.href = "admin-dashboard.html";
   }
 }
+const roleSelect = document.getElementById("registerRole");
+const shopContainer = document.getElementById("shop-name-container");
+
+roleSelect.addEventListener("change", () => {
+  if (roleSelect.value === "vendor") {
+    shopContainer.classList.remove("hidden");
+  } else {
+    shopContainer.classList.add("hidden");
+  }
+});

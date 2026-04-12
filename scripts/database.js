@@ -9,15 +9,30 @@ import {
   OAuthProvider,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
-  onAuthStateChanged
+  onAuthStateChanged,
+  signOut
 } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-auth.js";
 
 import {
   getFirestore,
   doc,
   setDoc,
-  getDoc
+  getDoc,
+  addDoc,
+  getDocs,
+  updateDoc,
+  deleteDoc,
+  collection,
+  query,
+  where,
+  serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
+import {
+  getStorage,
+  ref,
+  uploadBytes,
+  getDownloadURL
+} from "https://www.gstatic.com/firebasejs/12.11.0/firebase-storage.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDE3BNbrepcvN5ykhG8BaMM-eUBNXtIUrw",
@@ -31,11 +46,16 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
+const storage = getStorage(app);
 
 
 export {
   auth,
   db,
+  storage,
+  ref,
+  uploadBytes,
+  getDownloadURL,
   signInWithPopup,
   GoogleAuthProvider,
   FacebookAuthProvider,
@@ -45,10 +65,20 @@ export {
   createUserWithEmailAndPassword,
   doc,
   setDoc,
-  getDoc
+  getDoc,
+  addDoc,
+  getDocs,
+  updateDoc,
+  deleteDoc,
+  onAuthStateChanged,
+  collection,
+  query,
+  where,
+  serverTimestamp,
+  signOut
 };
 
-export class MenuItem{
+/*export class MenuItem{
   name
   price
   description
@@ -56,8 +86,9 @@ export class MenuItem{
   category
   restrictions
   id
+  menu
 
-  constructor(id, name, price, description, image, category, restrictions) {
+  constructor(id, name, price, description, image, category, restrictions, menu) {
     this.id = id;
     this.name = name;
     this.price = price;
@@ -65,6 +96,7 @@ export class MenuItem{
     this.image = image;
     this.category = category;
     this.restrictions = restrictions;
+    this.menu = menu;
   }
 }
 
@@ -78,7 +110,8 @@ export class Menu{
   addItem(menuItem){
     this.itemList.push(menuItem);
   }
-}
+}*/
 
 //export class MenuItem {};
 //export class Menu {};
+
