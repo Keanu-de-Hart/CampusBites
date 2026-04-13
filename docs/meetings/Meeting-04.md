@@ -188,3 +188,8 @@ Mika
 - Complete admin setup
 - Prepare for Monday’s presentation
 - Continue with ordering-related features in the next sprint
+
+## 15. Proof of meeting
+
+<img width="905" height="208" alt="image" src="https://github.com/user-attachments/assets/ef14bb54-796b-434a-b6eb-12e8ecc9894d" />
+
