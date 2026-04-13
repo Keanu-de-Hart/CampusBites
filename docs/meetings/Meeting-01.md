@@ -108,3 +108,8 @@ Minimum requirements:
 - Clarification needed from tutor on:
   - Preferred format for reports vs GitHub
   - Vendor features (e.g. image uploads)
+
+ ## 9. Proof of meeting
+
+<img width="811" height="200" alt="image" src="https://github.com/user-attachments/assets/216c615a-f94f-45d4-a730-64963bbfb773" />
+
