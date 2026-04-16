@@ -109,7 +109,6 @@
     </section>
   </main>
 
-<script type="module" src="./scripts/vendor-dashboard.js"></script>
 <script type="module">
   import { initAuthUI, logout } from "./scripts/auth.js";
 
@@ -117,6 +116,10 @@
   lucide.createIcons();
   // Attach logout button
   document.getElementById("logoutBtn")?.addEventListener("click", logout);
+</script>
+<script type="module">
+  import { initVendorDashboard } from "./scripts/vendor-dashboard.js";
+  initVendorDashboard();
 </script>
 </body>
 </html>

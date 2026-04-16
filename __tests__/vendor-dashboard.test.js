@@ -38,8 +38,10 @@ document.body.innerHTML = `
   <button id="save-btn"></button>
   <div id="save-spinner" class="hidden"></div>
 `;
-
-const { calculateRevenue } = require('../scripts/vendor-dashboard.js');
+const {
+  calculateRevenue,
+  initVendorDashboard
+} = require('../scripts/vendor-dashboard.js');
 
 describe('calculateRevenue', () => {
   test('sums order totals correctly', () => {
@@ -70,5 +72,112 @@ describe('calculateRevenue', () => {
 
   test('handles all zero totals', () => {
     expect(calculateRevenue([{ total: 0 }, { total: 0 }])).toBe(0);
+  });
+});
+
+const dbModule = require('../scripts/database.js');
+
+describe('initVendorDashboard', () => {
+
+  let mockLocation;
+  let mockAlert;
+
+  beforeEach(() => {
+    mockLocation = { href: '' };
+    mockAlert = jest.fn();
+  });
+
+  test('redirects to login if no user', async () => {
+    dbModule.onAuthStateChanged.mockImplementation((auth, callback) => {
+      callback(null); // no user
+    });
+
+    initVendorDashboard(mockLocation, mockAlert);
+
+    expect(mockLocation.href).toBe('login.html');
+  });
+
+  test('redirects if user doc does not exist', async () => {
+    dbModule.onAuthStateChanged.mockImplementation((auth, callback) => {
+      callback({ uid: '123' });
+    });
+
+    dbModule.getDoc.mockResolvedValue({
+      exists: () => false
+    });
+
+    initVendorDashboard(mockLocation, mockAlert);
+
+    // wait for async
+    await Promise.resolve();
+
+    expect(mockLocation.href).toBe('login.html');
+  });
+
+  test('redirects if not vendor', async () => {
+    dbModule.onAuthStateChanged.mockImplementation((auth, callback) => {
+      callback({ uid: '123' });
+    });
+
+    dbModule.getDoc.mockResolvedValue({
+      exists: () => true,
+      data: () => ({ role: 'customer' })
+    });
+
+    initVendorDashboard(mockLocation, mockAlert);
+    await Promise.resolve();
+
+    expect(mockLocation.href).toBe('index.html');
+  });
+
+  test('redirects pending vendor', async () => {
+    dbModule.onAuthStateChanged.mockImplementation((auth, callback) => {
+      callback({ uid: '123' });
+    });
+
+    dbModule.getDoc.mockResolvedValue({
+      exists: () => true,
+      data: () => ({ role: 'vendor', status: 'pending' })
+    });
+
+    initVendorDashboard(mockLocation, mockAlert);
+    await Promise.resolve();
+
+    expect(mockLocation.href).toBe('pending-approval.html');
+  });
+
+  test('handles suspended vendor', async () => {
+    dbModule.onAuthStateChanged.mockImplementation((auth, callback) => {
+      callback({ uid: '123' });
+    });
+
+    dbModule.getDoc.mockResolvedValue({
+      exists: () => true,
+      data: () => ({ role: 'vendor', status: 'suspended' })
+    });
+
+    initVendorDashboard(mockLocation, mockAlert);
+    await Promise.resolve();
+
+    expect(mockAlert).toHaveBeenCalledWith("Your account is suspended");
+    expect(mockLocation.href).toBe('login.html');
+  });
+
+  test('allows approved vendor', async () => {
+    console.log = jest.fn(); // silence log
+
+    dbModule.onAuthStateChanged.mockImplementation((auth, callback) => {
+      callback({ uid: '123' });
+    });
+
+    dbModule.getDoc.mockResolvedValue({
+      exists: () => true,
+      data: () => ({ role: 'vendor', status: 'approved' })
+    });
+
+    initVendorDashboard(mockLocation, mockAlert);
+    await Promise.resolve();
+
+    expect(console.log).toHaveBeenCalledWith("Access granted to vendor dashboard");
   });
 });

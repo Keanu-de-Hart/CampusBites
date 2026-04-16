@@ -1,34 +1,56 @@
-// The mock replaces the real file entirely — ESM internals never run
-jest.mock('../scripts/login.js', () => ({
-  redirectUser: jest.fn(),
-  navigateTo: jest.fn(),
-}));
+// __tests__/login.test.js
 
-const { redirectUser } = require('../scripts/login.js');
-const mockNavigateTo = jest.fn();
+import { navigateTo, redirectUser } from '../scripts/login.js';
 
-beforeEach(() => jest.clearAllMocks());
+describe('navigateTo', () => {
+  test('calls location.assign with the given page', () => {
+    const mockAssign = jest.fn();
 
-test('customer redirect', () => {
-  redirectUser.mockImplementation((role) => {
-    if (role === 'customer') mockNavigateTo('customer-dashboard.html');
+    const mockLocation = {
+      assign: mockAssign
+    };
+
+    navigateTo('some-page.html', mockLocation);
+
+    expect(mockAssign).toHaveBeenCalledWith('some-page.html');
+    expect(mockAssign).toHaveBeenCalledTimes(1);
   });
-  redirectUser('customer');
-  expect(mockNavigateTo).toHaveBeenCalledWith('customer-dashboard.html');
+
+  test('throws error if invalid location object is passed', () => {
+    expect(() => navigateTo('page.html', {})).toThrow('Invalid location object');
+  });
 });
 
-test('vendor redirect', () => {
-  redirectUser.mockImplementation((role) => {
-    if (role === 'vendor') mockNavigateTo('vendor-dashboard.html');
-  });
-  redirectUser('vendor');
-  expect(mockNavigateTo).toHaveBeenCalledWith('vendor-dashboard.html');
-});
+describe('redirectUser', () => {
+  let mockAssign;
+  let mockLocation;
 
-test('admin redirect', () => {
-  redirectUser.mockImplementation((role) => {
-    if (role === 'admin') mockNavigateTo('admin-dashboard.html');
+  beforeEach(() => {
+    mockAssign = jest.fn();
+    mockLocation = { assign: mockAssign };
   });
-  redirectUser('admin');
-  expect(mockNavigateTo).toHaveBeenCalledWith('admin-dashboard.html');
+
+  test('redirects customer correctly', () => {
+    redirectUser('customer', mockLocation);
+    expect(mockAssign).toHaveBeenCalledWith('customer-dashboard.html');
+  });
+
+  test('redirects vendor correctly', () => {
+    redirectUser('vendor', mockLocation);
+    expect(mockAssign).toHaveBeenCalledWith('vendor-dashboard.html');
+  });
+
+  test('redirects admin correctly', () => {
+    redirectUser('admin', mockLocation);
+    expect(mockAssign).toHaveBeenCalledWith('admin-dashboard.html');
+  });
+
+  test('does nothing for unknown role', () => {
+    redirectUser('unknown', mockLocation);
+    expect(mockAssign).not.toHaveBeenCalled();
+  });
+
+  test('throws error if invalid location object is passed', () => {
+    expect(() => redirectUser('customer', {})).toThrow('Invalid location object');
+  });
 });

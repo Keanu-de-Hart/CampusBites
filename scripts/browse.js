@@ -4,7 +4,7 @@ import {
   collection
 } from "./database.js";
 
-lucide.createIcons();
+
 
 const vegan = document.getElementById("Vegan");
 const vegetarian = document.getElementById("Vegetarian");
@@ -18,36 +18,45 @@ let vendor = "AllVendors";
 let category = "AllCategories";
 let done = false;
 
-function addToCart(item){
-    cart.push(item);
+export function addToCart(cartArr, item){
+    // If called with two args (from tests), return new array
+    if(item !== undefined){
+        return [...cartArr, item];
+    }
+    // If called with one arg (internal usage), push to module cart
+    cart.push(cartArr);
 }
+export function applyFilter(item, restrictionsArg, categoryArg, vendorArg){
+  // Use passed arguments if provided, otherwise fall back to module-level variables
+  const activeRestrictions = restrictionsArg !== undefined ? restrictionsArg : restrictions;
+  const activeCategory = categoryArg !== undefined ? categoryArg : category;
+  const activeVendor = vendorArg !== undefined ? vendorArg : vendor;
 
-function applyFilter(item){
   if(!item.available){
     return false;
   }
-  if(restrictions[0] && !item.dietary.includes("Vegan")){
+  if(activeRestrictions[0] && !item.dietary.includes("Vegan")){
     return false;
   }
-  if(restrictions[1] && !item.dietary.includes("Vegetarian")){
+  if(activeRestrictions[1] && !item.dietary.includes("Vegetarian")){
     return false;
   }
-  if(restrictions[2] && item.allergens.includes("Gluten")){
+  if(activeRestrictions[2] && item.allergens.includes("Gluten")){
     return false;
   }
-  if(restrictions[3] && !item.dietary.includes("Halal")){
+  if(activeRestrictions[3] && !item.dietary.includes("Halal")){
     return false;
   }
-  if(category != "AllCategories" && item.category != category){
+  if(activeCategory != "AllCategories" && item.category != activeCategory){
     return false;
   }
-  if(vendor != "AllVendors" && item.vendorName != vendor){
+  if(activeVendor != "AllVendors" && item.vendorName != activeVendor){
     return false;
   }
   return true;
 }
 
-function updateCart(){
+export function updateCart(){
   const container = document.getElementById("cartList");
   let html = ``;
   for(let i = 0; i < cart.length; i++){
@@ -244,3 +253,7 @@ document.getElementById("cart").addEventListener("click", () => {
     document.getElementById('item-edit-modal').classList.remove('hidden');
     updateCart();
 }); 
+
+if (typeof lucide !== "undefined") {
+  lucide.createIcons();
+}
