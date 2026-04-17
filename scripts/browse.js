@@ -89,7 +89,7 @@ function updateCart(){
     </article>`;
   }
   container.innerHTML = html;
-  lucide.createIcons();
+  globalThis.lucide?.createIcons?.();
 }
 
 const loadMenuItems = async () => {

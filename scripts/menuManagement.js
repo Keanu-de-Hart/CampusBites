@@ -17,7 +17,7 @@ import {
   getDownloadURL
 } from "./database.js";
 
-lucide.createIcons();
+globalThis.lucide?.createIcons?.();
 let currentUser = null;
 let userData = null; 
 

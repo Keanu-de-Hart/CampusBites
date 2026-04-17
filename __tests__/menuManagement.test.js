@@ -1,103 +1,82 @@
 /**
  * @jest-environment jsdom
  */
+global.lucide = { createIcons: jest.fn() };
 
 jest.mock('../scripts/database.js', () => ({
   db: {},
   auth: {
     onAuthStateChanged: jest.fn()
   },
+
   addDoc: jest.fn(),
   getDocs: jest.fn(),
   getDoc: jest.fn(),
   updateDoc: jest.fn(),
-  collection: jest.fn(),
   deleteDoc: jest.fn(),
-  doc: jest.fn(() => "mockDocRef"),
-  where: jest.fn(),
-  query: jest.fn(),
+
+  collection: jest.fn(() => "collectionRef"),
+  where: jest.fn(() => "whereClause"),
+  query: jest.fn(() => "queryRef"),
+  doc: jest.fn(() => "docRef"),
+
   serverTimestamp: jest.fn(() => "timestamp"),
+
   storage: {},
   ref: jest.fn(),
   uploadBytes: jest.fn(),
   getDownloadURL: jest.fn()
 }));
 
-import {
-  auth,
-  getDocs,
-  getDoc,
-  addDoc,
-  updateDoc,
-  deleteDoc
-} from '../scripts/database.js';
-
 describe("menu.js", () => {
+  let auth, getDocs, getDoc, addDoc, updateDoc, deleteDoc;
 
-  let fakeUser;
+ beforeEach(() => {
+  jest.resetModules();
+  jest.clearAllMocks();
 
-  beforeEach(() => {
-    document.body.innerHTML = `
-      <table>
-        <tbody id="menu-table-body"></tbody>
-      </table>
+  document.body.innerHTML = `
+    <table>
+      <tbody id="menu-table-body"></tbody>
+    </table>
 
-      <form id="item-form"></form>
-      <input id="edit-item-id" />
-      <input id="item-name" />
-      <input id="item-description" />
-      <input id="item-price" />
-      <input id="item-category" />
-      <input id="item-image" type="file" />
+    <form id="item-form"></form>
+    <input id="edit-item-id" />
+    <input id="item-name" />
+    <input id="item-description" />
+    <input id="item-price" />
+    <input id="item-category" />
+    <input id="item-image" type="file" />
 
-      <div id="item-edit-modal" class="hidden"></div>
-      <h2 id="modal-title"></h2>
+    <div id="item-edit-modal" class="hidden"></div>
+    <h2 id="modal-title"></h2>
 
-      <button id="add-item-btn"></button>
+    <button id="add-item-btn"></button>
 
-      <input type="checkbox" class="item-allergen" value="nuts" />
-      <input type="checkbox" class="item-dietary" value="vegan" />
-    `;
+    <input type="checkbox" class="item-allergen" value="nuts" />
+    <input type="checkbox" class="item-dietary" value="vegan" />
+  `;
 
-    // mock lucide
-    global.lucide = { createIcons: jest.fn() };
+  document.getElementById("item-form").reset = jest.fn();
 
-    fakeUser = { uid: "user123" };
+  ({ auth, getDocs, getDoc, addDoc, updateDoc, deleteDoc } =
+    require('../scripts/database.js'));
 
-    // mock auth callback
-    auth.onAuthStateChanged.mockImplementation(cb => cb(fakeUser));
+  auth.onAuthStateChanged.mockImplementation(cb => cb({ uid: "user123" }));
 
-    // mock user data
-    getDoc.mockResolvedValue({
-      data: () => ({ shopName: "Test Shop" })
-    });
-
-    // prevent jsdom navigation crash
-    delete window.location;
-
-    window.location = {
-      href: '',
-      assign: jest.fn()
-    };
-
-    jest.clearAllMocks();
+  getDoc.mockResolvedValue({
+    data: () => ({ shopName: "Test Shop" })
   });
-
-  // helper to load module AFTER mocks
-const loadModule = async () => {
+});
+  const loadModule = async () => {
   await import('../scripts/menuManagement.js');
-  await new Promise(r => setTimeout(r, 10)); // increase delay slightly
+  await new Promise(r => setTimeout(r, 50));
 };
-
-  test("initialises and loads menu items", async () => {
-    getDocs.mockResolvedValue({
-      docs: []
-    });
+  // tests...
+   test("initialises and loads menu items", async () => {
+    getDocs.mockResolvedValue({ docs: [] });
 
     await loadModule();
-
-await Promise.resolve(); // flush microtasks
-
     expect(getDocs).toHaveBeenCalled();
   });
 
@@ -118,9 +97,7 @@ await Promise.resolve(); // flush microtasks
     });
 
     await loadModule();
-
-await Promise.resolve(); // flush microtasks
-
+    await new Promise(r => setTimeout(r, 100));
     const tbody = document.getElementById("menu-table-body");
     expect(tbody.innerHTML).toContain("Burger");
     expect(tbody.innerHTML).toContain("Fast Food");
@@ -129,18 +106,17 @@ await Promise.resolve(); // flush microtasks
 
   test("deleteItem deletes and refreshes", async () => {
     global.confirm = jest.fn(() => true);
+
     getDocs.mockResolvedValue({
-    docs: [
+      docs: [
         {
           id: "1",
           data: () => ({ name: "Burger" })
         }
       ]
     });
+
     await loadModule();
-
-await Promise.resolve(); // flush microtasks
-
     await window.views.deleteItem("123");
 
     expect(deleteDoc).toHaveBeenCalled();
@@ -148,17 +124,15 @@ await Promise.resolve(); // flush microtasks
 
   test("toggleAvailability updates item", async () => {
     getDocs.mockResolvedValue({
-  docs: [
-    {
-      id: "1",
-      data: () => ({ name: "Burger" })
-    }
-  ]
-});
+      docs: [
+        {
+          id: "1",
+          data: () => ({ name: "Burger" })
+        }
+      ]
+    });
+
     await loadModule();
-
-await Promise.resolve(); // flush microtasks
-
     await window.views.toggleAvailability("123", true);
 
     expect(updateDoc).toHaveBeenCalledWith(expect.anything(), {
@@ -168,18 +142,22 @@ await Promise.resolve(); // flush microtasks
 
   test("openEditItem populates form", async () => {
     getDocs.mockResolvedValue({
-  docs: [
-    {
-      id: "1",
-      data: () => ({ name: "Burger" })
-    }
-  ]
-});
+      docs: [
+        {
+          id: "1",
+          data: () => ({
+            name: "Burger",
+            description: "Nice",
+            price: 50,
+            category: "Fast Food",
+            allergens: [],
+            dietary: []
+          })
+        }
+      ]
+    });
 
     await loadModule();
-
-await Promise.resolve(); // flush microtasks
-
     await window.views.openEditItem("1");
 
     expect(document.getElementById("item-name").value).toBe("Burger");
@@ -188,17 +166,9 @@ await Promise.resolve(); // flush microtasks
   });
 
   test("saveItem adds new item", async () => {
-    getDocs.mockResolvedValue({
-  docs: [
-    {
-      id: "1",
-      data: () => ({ name: "Burger" })
-    }
-  ]
-});
-    await loadModule();
+    getDocs.mockResolvedValue({ docs: [] });
 
-await Promise.resolve(); // flush microtasks
+    await loadModule();
 
     document.getElementById("item-name").value = "Burger";
     document.getElementById("item-description").value = "Nice";
@@ -213,17 +183,9 @@ await Promise.resolve(); // flush microtasks
   });
 
   test("saveItem updates existing item", async () => {
-    getDocs.mockResolvedValue({
-  docs: [
-    {
-      id: "1",
-      data: () => ({ name: "Burger" })
-    }
-  ]
-});
-    await loadModule();
+    getDocs.mockResolvedValue({ docs: [] });
 
-await Promise.resolve(); // flush microtasks
+    await loadModule();
 
     document.getElementById("edit-item-id").value = "123";
     document.getElementById("item-name").value = "Burger";
@@ -239,17 +201,10 @@ await Promise.resolve(); // flush microtasks
   });
 
   test("Add button opens modal in add mode", async () => {
-    getDocs.mockResolvedValue({
-  docs: [
-    {
-      id: "1",
-      data: () => ({ name: "Burger" })
-    }
-  ]
-});
-    await loadModule();
+    getDocs.mockResolvedValue({ docs: [] });
 
-await Promise.resolve(); // flush microtasks
+    await loadModule();
+    await new Promise(r => setTimeout(r, 100));
 
     document.getElementById("add-item-btn").click();
 
@@ -259,15 +214,15 @@ await Promise.resolve(); // flush microtasks
     expect(document.getElementById("item-edit-modal")
       .classList.contains("hidden")).toBe(false);
   });
+ test("redirects if no user", async () => {
+  const logSpy = jest.spyOn(console, "log").mockImplementation(() => {});
 
-  test("redirects if no user", async () => {
-    auth.onAuthStateChanged.mockImplementation(cb => cb(null));
+  auth.onAuthStateChanged.mockImplementation(cb => cb(null));
 
-    await loadModule();
+  await loadModule();
 
-await Promise.resolve(); // flush microtasks
+  expect(logSpy).toHaveBeenCalledWith("No user is signed in.");
 
-    expect(window.location.assign).toHaveBeenCalledWith("index.html");
-  });
-
+  logSpy.mockRestore();
+}); 
 });

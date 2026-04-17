@@ -1,10 +1,14 @@
+/**
+ * @jest-environment jsdom
+ */
+
+global.lucide = { createIcons: jest.fn() };
+
 jest.mock('../scripts/database.js', () => ({
   db: {},
   getDocs: jest.fn(),
   collection: jest.fn(),
 }));
-
-global.lucide = { createIcons: jest.fn() };
 
 const sampleItems = [
   {
@@ -31,44 +35,67 @@ const sampleItems = [
   }
 ];
 
-function makeSnapshot(items) {
-  return {
-    docs: items.map(i => ({
-      id: i.id,
-      data: () => i
-    }))
-  };
-}
+const makeSnapshot = (items) => ({
+  docs: items.map(i => ({
+    id: i.id,
+    data: () => i
+  }))
+});
 
+let getDocs;
 beforeEach(() => {
+  jest.resetModules();
+
   document.body.innerHTML = `
-    <div id="menu"></div>
-    <div id="cartList"></div>
-    <span id="numItems"></span>
+    <a id="AdmindashboardLink"></a>
+    <a id="CustomerdashboardLink"></a>
+    <a id="VendordashboardLink"></a>
+    <a id="loginLink"></a>
+
+    <select id="Vendors">
+      <option value="AllVendors">All Vendors</option>
+    </select>
+
+    <select id="Categories">
+      <option value="AllCategories">All Categories</option>
+    </select>
+
+    <input id="Vegan" type="checkbox"/>
+    <input id="Vegetarian" type="checkbox"/>
+    <input id="Gluten-Free" type="checkbox"/>
+    <input id="Halal" type="checkbox"/>
+
     <button id="cart"></button>
+    <p id="numItems"></p>
+
+    <section id="menu"></section>
+
+    <div id="item-edit-modal" class="hidden"></div>
+    <h3 id="modal-title"></h3>
+    <section id="cartList"></section>
   `;
+
+  ({ getDocs } = require('../scripts/database.js'));
 });
 
-test('loads and renders items', async () => {
-  const { getDocs } = require('../scripts/database.js');
+test('renders items', async () => {
+  getDocs
+    .mockResolvedValueOnce(makeSnapshot(sampleItems)) // menu_items
+    .mockResolvedValueOnce(makeSnapshot([]));         // users
 
-  getDocs.mockResolvedValue(makeSnapshot(sampleItems));
+  const mod = await import('../scripts/browse.js');
+  await mod.loadBrowseItems();
 
-  await import('../scripts/browse.js');
-
-  await new Promise(r => setTimeout(r, 0));
-
-  expect(document.getElementById('menu').innerHTML).toContain('Burger');
+  expect(document.getElementById("menu").innerHTML).toContain("Burger");
 });
 
-test('filters only available items', async () => {
-  const { getDocs } = require('../scripts/database.js');
+test('filters available items', async () => {
+  getDocs
+    .mockResolvedValueOnce(makeSnapshot(sampleItems))
+    .mockResolvedValueOnce(makeSnapshot([]));
 
-  getDocs.mockResolvedValue(makeSnapshot(sampleItems));
+  const mod = await import('../scripts/browse.js');
+  await mod.loadBrowseItems();
 
-  await import('../scripts/browse.js');
-
-  await new Promise(r => setTimeout(r, 0));
-
-  expect(document.getElementById('menu').innerHTML).toContain('Pizza');
+  expect(document.getElementById("menu").innerHTML).toContain("Pizza");
 });

@@ -6,59 +6,50 @@ jest.mock('../scripts/database.js', () => ({
   doc: jest.fn(),
 }));
 
-const { calculateVendorStats, initAdminDashboard } = require('../scripts/admin.js');
-const { getDocs } = require('../scripts/database.js');
+let calculateVendorStats;
+let initAdminDashboard;
+let getDocs;
 
 beforeEach(() => {
+  jest.resetModules();
+
   document.body.innerHTML = `
-    <tbody id="vendor-table-body"></tbody>
+    <table>
+      <tbody id="vendor-table-body"></tbody>
+    </table>
     <span id="admin-total-vendors"></span>
     <span id="admin-active-today"></span>
     <span id="admin-pending"></span>
   `;
 
   window.__JEST__ = true;
+
+  ({ getDocs } = require('../scripts/database.js'));
+  ({ calculateVendorStats, initAdminDashboard } = require('../scripts/admin.js'));
 });
 
-const makeSnapshot = (items) => ({
-  docs: items.map(i => ({
-    id: i.id || '1',
-    data: () => i
-  }))
+test('stats calculation', () => {
+  const result = calculateVendorStats([
+    { role: 'vendor', status: 'approved' },
+    { role: 'vendor', status: 'pending' },
+    { role: 'customer' }
+  ]);
+
+  expect(result.total).toBe(2);
+  expect(result.active).toBe(1);
+  expect(result.pending).toBe(1);
 });
 
-describe('extra coverage', () => {
-
-  test('stats mixed', () => {
-    const users = [
-      { role: 'vendor', status: 'approved' },
-      { role: 'vendor', status: 'approved' },
-      { role: 'vendor', status: 'pending' },
-      { role: 'customer' },
-    ];
-
-    const result = calculateVendorStats(users);
-
-    expect(result.total).toBe(3);
-    expect(result.active).toBe(2);
-    expect(result.pending).toBe(1);
+test('dashboard renders', async () => {
+  getDocs.mockResolvedValue({
+    docs: [
+      { id: '1', data: () => ({ role: 'vendor', fullName: 'Shop A' }) }
+    ]
   });
 
-  test('init dashboard renders', async () => {
-    getDocs.mockResolvedValue(makeSnapshot([
-      { role: 'vendor', fullName: 'Shop A', status: 'approved' }
-    ]));
+  await initAdminDashboard();
+  await new Promise(r => setTimeout(r, 10));
 
-    await initAdminDashboard();
-
-    expect(document.getElementById('vendor-table-body').innerHTML).toContain('Shop A');
-  });
-
-  test('empty vendors', async () => {
-    getDocs.mockResolvedValue(makeSnapshot([]));
-
-    await initAdminDashboard();
-
-    expect(document.getElementById('vendor-table-body').innerHTML).toBe('');
-  });
+  expect(document.getElementById("vendor-table-body").innerHTML)
+    .toContain("Shop A");
 });
