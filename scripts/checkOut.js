@@ -50,6 +50,7 @@ const loadOrders = async () => {
             <div>
             <span class = "inline-block">${orders[i].menuItems.map(item => `
             <img src="${item.image}" class="w-full h-10 object-cover rounded-lg mb-4">
+            ${item.name}
           `).join('')}</span>
             </div>
           </div>
