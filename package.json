@@ -11,7 +11,8 @@
     "testEnvironment": "jsdom",
     "setupFiles": ["<rootDir>/jest.setup.js"],
     "moduleNameMapper": {
-      "\\./database\\.js$": "<rootDir>/__mocks__/database.js"
+      "\\./database\\.js$": "<rootDir>/__mocks__/database.js",
+      "^https://.*$": "<rootDir>/__mocks__/cdnModule.js"
     },
     "collectCoverageFrom": [
       "scripts/**/*.js"
