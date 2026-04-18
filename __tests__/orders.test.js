@@ -95,6 +95,39 @@ describe("mapSnapshotToOrders", () => {
   });
 });
 
+// ─── onAuthStateChanged (module-load side-effect) ──────────
+
+describe("onAuthStateChanged initialisation", () => {
+  beforeEach(() => {
+    jest.resetModules();
+    document.body.innerHTML = '<div id="newOrders"></div>';
+  });
+
+  test("does nothing when no user is logged in", async () => {
+    const db = require('../scripts/database.js');
+    db.onAuthStateChanged.mockImplementation((_auth, cb) => cb(null));
+
+    require('../scripts/orders.js');
+    await Promise.resolve();
+
+    expect(db.getDoc).not.toHaveBeenCalled();
+  });
+
+  test("fetches user doc and starts listening when a user is logged in", async () => {
+    const db = require('../scripts/database.js');
+    db.onAuthStateChanged.mockImplementation((_auth, cb) => cb({ uid: "vendor1" }));
+    db.getDoc.mockResolvedValue({ data: () => ({ shopName: "Burger Palace" }) });
+    db.onSnapshot.mockReturnValue(jest.fn());
+
+    require('../scripts/orders.js');
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(db.getDoc).toHaveBeenCalled();
+    expect(db.onSnapshot).toHaveBeenCalled();
+  });
+});
+
 // ─── listenToVendorOrders ──────────────────────────────────
 
 describe("listenToVendorOrders", () => {
