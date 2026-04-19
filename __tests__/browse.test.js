@@ -8,6 +8,8 @@ jest.mock('../scripts/database.js', () => ({
   db: {},
   getDocs: jest.fn(),
   collection: jest.fn(),
+  auth: {},
+  onAuthStateChanged: jest.fn((auth, cb) => cb(null))
 }));
 
 const sampleItems = [
