@@ -14,7 +14,6 @@ import {
 // ---------------- AUTH GUARD ----------------
 export function initVendorDashboard(locationObj = window.location, alertFn = alert) {
   onAuthStateChanged(auth, async (user) => {
-
     if (!user) {
       locationObj.href = "login.html";
       return;
@@ -46,10 +45,6 @@ export function initVendorDashboard(locationObj = window.location, alertFn = ale
       return;
     }
 
-    console.log("Access granted to vendor dashboard");
-    console.log("Logged in vendor UID:", user.uid);
-
-
     const orders = await fetchVendorOrders(user.uid);
     renderOrders(orders);
     attachOrderStatusListeners();
@@ -66,14 +61,23 @@ export async function fetchVendorOrders(vendorId) {
   const vendorOrdersQuery = query(ordersRef, where("vendorId", "==", vendorId));
   const snapshot = await getDocs(vendorOrdersQuery);
 
-  return snapshot.docs.map((orderDoc) => ({
+  const orders = snapshot.docs.map((orderDoc) => ({
     id: orderDoc.id,
     ...orderDoc.data()
   }));
+
+  // Optional: newest first if createdAt exists
+  orders.sort((a, b) => {
+    const aTime = a.createdAt?.seconds || 0;
+    const bTime = b.createdAt?.seconds || 0;
+    return bTime - aTime;
+  });
+
+  return orders;
 }
 
 export function getStatusButtons(order) {
-  const statuses = ["Pending", "Preparing", "Ready"];
+  const statuses = ["Pending", "Preparing", "Ready","Collected"];
   const currentStatus = order.status || "Pending";
 
   return statuses.map((status) => {
@@ -100,20 +104,18 @@ export function getStatusButtons(order) {
 export function renderOrders(orders) {
   const ordersList = document.getElementById("orders-list");
 
-  if (!ordersList) {
-    return;
-  }
+  if (!ordersList) return;
 
   if (!orders.length) {
     ordersList.innerHTML = `<p class="text-gray-500">No orders available yet.</p>`;
     return;
   }
 
-  ordersList.innerHTML = orders.map((order) => `
+  ordersList.innerHTML = orders.map((order, index) => `
     <article class="border border-gray-200 rounded-xl p-4">
       <header class="mb-3">
-        <h3 class="text-lg font-semibold text-gray-900">Order #${order.id}</h3>
-        <p class="text-sm text-gray-600">Status: ${order.status || "pending"}</p>
+        <h3 class="text-lg font-semibold text-gray-900">Order ${index + 1}</h3>
+        <p class="text-sm text-gray-600">Status: ${order.status || "Pending"}</p>
       </header>
 
       <section class="mb-3">
@@ -143,34 +145,24 @@ export function attachOrderStatusListeners() {
 
   ordersList.addEventListener("click", async (event) => {
     const button = event.target.closest("button");
-
-    if (!button) {
-      return;
-    }
+    if (!button) return;
 
     const orderId = button.dataset.orderId;
     const newStatus = button.dataset.status;
 
-    if (!orderId || !newStatus) {
-      return;
-    }
+    if (!orderId || !newStatus) return;
 
     await updateOrderStatus(orderId, newStatus);
 
     const updatedOrderElement = button.closest("article");
-
-    if (!updatedOrderElement) {
-      return;
-    }
+    if (!updatedOrderElement) return;
 
     const statusText = updatedOrderElement.querySelector("p.text-sm.text-gray-600");
-
     if (statusText) {
       statusText.textContent = `Status: ${newStatus}`;
     }
 
     const buttonSection = updatedOrderElement.querySelector("section.flex.flex-wrap.gap-2");
-
     if (buttonSection) {
       buttonSection.innerHTML = getStatusButtons({
         id: orderId,
