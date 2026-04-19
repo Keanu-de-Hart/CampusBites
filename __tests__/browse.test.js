@@ -73,6 +73,14 @@ beforeEach(() => {
     <div id="item-edit-modal" class="hidden"></div>
     <h3 id="modal-title"></h3>
     <section id="cartList"></section>
+    <section class="flex gap-3 mt-6">
+                <button type="button"
+                    onclick="document.getElementById('item-edit-modal').classList.add('hidden')"
+                    class="flex-1 border border-gray-300 py-2 rounded-lg hover:bg-gray-50">
+                    Close
+                </button>
+                <button id = "checkOut" class="bg-indigo-600 text-white mx-5 px-4 py-2 rounded-lg hover:bg-indigo-700 transition"> Check Out</button>
+            </section>
   `;
 
   ({ getDocs } = require('../scripts/database.js'));
