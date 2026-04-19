@@ -57,6 +57,7 @@ export {
   storage,
   ref,
   uploadBytes,
+  onSnapshot,
   getDownloadURL,
   signInWithPopup,
   GoogleAuthProvider,
@@ -80,41 +81,3 @@ export {
   signOut,
   sendPasswordResetEmail
 };
-
-/*export class MenuItem{
-  name
-  price
-  description
-  image
-  category
-  restrictions
-  id
-  menu
-
-  constructor(id, name, price, description, image, category, restrictions, menu) {
-    this.id = id;
-    this.name = name;
-    this.price = price;
-    this.description = description;
-    this.image = image;
-    this.category = category;
-    this.restrictions = restrictions;
-    this.menu = menu;
-  }
-}
-
-export class Menu{
-  itemList
-  owner
-  constructor(owner){
-    this.itemList = [];
-    this.owner = owner;
-  }
-  addItem(menuItem){
-    this.itemList.push(menuItem);
-  }
-}*/
-
-//export class MenuItem {};
-//export class Menu {};
-

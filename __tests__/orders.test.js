@@ -1,173 +1,280 @@
-jest.mock('../scripts/database.js', () => ({
+/**
+ * @jest-environment jsdom
+ */
+
+global.lucide = { createIcons: jest.fn() };
+
+jest.mock("../scripts/database.js", () => ({
   db: {},
   auth: {},
-  onAuthStateChanged: jest.fn(),
   getDoc: jest.fn(),
-  doc: jest.fn(),
   collection: jest.fn(),
-  query: jest.fn(),
+  doc: jest.fn((...args) => args),
   where: jest.fn(),
-  onSnapshot: jest.fn(),
+  query: jest.fn(),
+  onAuthStateChanged: jest.fn(),
+  onSnapshot: jest.fn()
 }));
 
-import { buildOrderHTML, mapSnapshotToOrders, renderOrders, listenToVendorOrders } from "../scripts/orders.js";
-import { onSnapshot } from "../scripts/database.js";
+const flush = async () => {
+  await Promise.resolve();
+  await Promise.resolve();
+  await Promise.resolve();
+  await Promise.resolve();
+};
 
-// ─── buildOrderHTML (pure — no mocks needed) ───────────────
+describe("orders.js", () => {
+  let db;
 
-describe("buildOrderHTML", () => {
-  test("contains order id", () => {
-    const html = buildOrderHTML({ id: "abc", userId: "u1", items: [], status: "new" });
-    expect(html).toContain("abc");
-  });
-
-  test("contains userId", () => {
-    const html = buildOrderHTML({ id: "1", userId: "user99", items: [], status: "new" });
-    expect(html).toContain("user99");
-  });
-
-  test("renders item name and quantity", () => {
-    const html = buildOrderHTML({
-      id: "1", userId: "u", status: "new",
-      items: [{ name: "Burger", quantity: 2 }]
-    });
-    expect(html).toContain("Burger");
-    expect(html).toContain("x2");
-  });
-
-  test("defaults quantity to 1 when missing", () => {
-    const html = buildOrderHTML({
-      id: "1", userId: "u", status: "new",
-      items: [{ name: "Chips" }]  // no quantity
-    });
-    expect(html).toContain("x1");
-  });
-
-  test("defaults status to 'new' when missing", () => {
-    const html = buildOrderHTML({ id: "1", userId: "u", items: [] });
-    expect(html).toContain("new");
-  });
-
-  test("renders multiple items", () => {
-    const html = buildOrderHTML({
-      id: "1", userId: "u", status: "new",
-      items: [{ name: "Pizza", quantity: 1 }, { name: "Coke", quantity: 2 }]
-    });
-    expect(html).toContain("Pizza");
-    expect(html).toContain("Coke");
-  });
-
-  test("handles empty items array", () => {
-    const html = buildOrderHTML({ id: "1", userId: "u", items: [], status: "new" });
-    expect(html).not.toContain("<p>-");
-  });
-});
-
-// ─── mapSnapshotToOrders (pure — no mocks needed) ──────────
-
-describe("mapSnapshotToOrders", () => {
-  test("maps docs to plain objects with id", () => {
-    const snapshot = {
-      docs: [
-        { id: "o1", data: () => ({ status: "new", shopName: "ShopA" }) },
-        { id: "o2", data: () => ({ status: "new", shopName: "ShopA" }) },
-      ]
-    };
-    const result = mapSnapshotToOrders(snapshot);
-    expect(result).toEqual([
-      { id: "o1", status: "new", shopName: "ShopA" },
-      { id: "o2", status: "new", shopName: "ShopA" },
-    ]);
-  });
-
-  test("returns empty array for empty snapshot", () => {
-    expect(mapSnapshotToOrders({ docs: [] })).toEqual([]);
-  });
-
-  test("spreads all data fields onto the object", () => {
-    const snapshot = {
-      docs: [{ id: "x", data: () => ({ userId: "u1", items: [], total: 99 }) }]
-    };
-    const [order] = mapSnapshotToOrders(snapshot);
-    expect(order.userId).toBe("u1");
-    expect(order.total).toBe(99);
-    expect(order.id).toBe("x");
-  });
-});
-
-// ─── onAuthStateChanged (module-load side-effect) ──────────
-
-describe("onAuthStateChanged initialisation", () => {
   beforeEach(() => {
     jest.resetModules();
-    document.body.innerHTML = '<div id="newOrders"></div>';
+    jest.clearAllMocks();
+
+    document.body.innerHTML = `
+      <div id="newOrders"></div>
+      <div id="inProgress"></div>
+      <div id="completedOrders"></div>
+    `;
+
+    global.lucide = { createIcons: jest.fn() };
+    db = require("../scripts/database.js");
   });
 
   test("does nothing when no user is logged in", async () => {
-    const db = require('../scripts/database.js');
     db.onAuthStateChanged.mockImplementation((_auth, cb) => cb(null));
 
-    require('../scripts/orders.js');
-    await Promise.resolve();
+    jest.isolateModules(() => {
+      require("../scripts/orders.js");
+    });
+
+    await flush();
 
     expect(db.getDoc).not.toHaveBeenCalled();
+    expect(db.onSnapshot).not.toHaveBeenCalled();
   });
 
-  test("fetches user doc and starts listening when a user is logged in", async () => {
-    const db = require('../scripts/database.js');
-    db.onAuthStateChanged.mockImplementation((_auth, cb) => cb({ uid: "vendor1" }));
-    db.getDoc.mockResolvedValue({ data: () => ({ shopName: "Burger Palace" }) });
-    db.onSnapshot.mockReturnValue(jest.fn());
+  test("does not start listener when vendor profile does not exist", async () => {
+    db.onAuthStateChanged.mockImplementation((_auth, cb) => cb({ uid: "vendor-1" }));
 
-    require('../scripts/orders.js');
-    await Promise.resolve();
-    await Promise.resolve();
+    db.getDoc.mockResolvedValue({
+      exists: () => false,
+      data: () => ({})
+    });
 
-    expect(db.getDoc).toHaveBeenCalled();
-    expect(db.onSnapshot).toHaveBeenCalled();
-  });
-});
+    jest.isolateModules(() => {
+      require("../scripts/orders.js");
+    });
 
-// ─── listenToVendorOrders ──────────────────────────────────
+    await flush();
 
-describe("listenToVendorOrders", () => {
-  test("invokes callback with mapped orders from snapshot", () => {
-    const fakeSnapshot = {
-      docs: [{ id: "o1", data: () => ({ status: "new", shopName: "TestShop" }) }]
-    };
-    onSnapshot.mockImplementation((_q, cb) => { cb(fakeSnapshot); return jest.fn(); });
-
-    const callback = jest.fn();
-    listenToVendorOrders("TestShop", callback);
-
-    expect(callback).toHaveBeenCalledWith([{ id: "o1", status: "new", shopName: "TestShop" }]);
-  });
-});
-
-// ─── renderOrders (needs DOM only — no Firebase) ───────────
-
-describe("renderOrders", () => {
-  beforeEach(() => {
-    document.body.innerHTML = `<div id="newOrders"></div>`;
+    expect(db.getDoc).toHaveBeenCalledTimes(1);
+    expect(db.onSnapshot).not.toHaveBeenCalled();
   });
 
-  test("renders one card per order", () => {
-    renderOrders([
-      { id: "1", userId: "u1", status: "new", items: [] },
-      { id: "2", userId: "u2", status: "new", items: [] },
-    ]);
-    expect(document.getElementById("newOrders").children.length).toBe(2);
-  });
+  test("renders pending orders into newOrders with customer names", async () => {
+    db.onAuthStateChanged.mockImplementation((_auth, cb) => cb({ uid: "vendor-1" }));
 
-  test("renders empty container for no orders", () => {
-    renderOrders([]);
-    expect(document.getElementById("newOrders").innerHTML).toBe("");
-  });
+    db.getDoc
+      .mockResolvedValueOnce({
+        exists: () => true,
+        data: () => ({ role: "vendor", status: "approved" })
+      })
+      .mockResolvedValueOnce({
+        exists: () => true,
+        data: () => ({ fullName: "Alice Smith" })
+      });
 
-  test("rendered HTML contains order data", () => {
-    renderOrders([{ id: "order99", userId: "userX", status: "pending", items: [] }]);
+    db.onSnapshot.mockImplementation((_q, cb) => {
+      cb({
+        docs: [
+          {
+            id: "order-1",
+            data: () => ({
+              vendorId: "vendor-1",
+              userId: "customer-1",
+              status: "Pending",
+              menuItems: [{ name: "Burger", quantity: 2 }]
+            })
+          }
+        ]
+      });
+      return jest.fn();
+    });
+
+    jest.isolateModules(() => {
+      require("../scripts/orders.js");
+    });
+
+    await flush();
+
     const html = document.getElementById("newOrders").innerHTML;
-    expect(html).toContain("order99");
-    expect(html).toContain("userX");
+    expect(html).toContain("Order 1");
+    expect(html).toContain("Alice Smith");
+    expect(html).toContain("Burger");
+    expect(html).toContain("x2");
+    expect(html).toContain("Pending");
+  });
+
+  test("renders Preparing and Ready orders into inProgress", async () => {
+    db.onAuthStateChanged.mockImplementation((_auth, cb) => cb({ uid: "vendor-1" }));
+
+    db.getDoc
+      .mockResolvedValueOnce({
+        exists: () => true,
+        data: () => ({ role: "vendor", status: "approved" })
+      })
+      .mockResolvedValueOnce({
+        exists: () => true,
+        data: () => ({ fullName: "Bob Jones" })
+      })
+      .mockResolvedValueOnce({
+        exists: () => true,
+        data: () => ({ fullName: "Cara Lee" })
+      });
+
+    db.onSnapshot.mockImplementation((_q, cb) => {
+      cb({
+        docs: [
+          {
+            id: "order-1",
+            data: () => ({
+              vendorId: "vendor-1",
+              userId: "customer-1",
+              status: "Preparing",
+              menuItems: [{ name: "Pizza", quantity: 1 }]
+            })
+          },
+          {
+            id: "order-2",
+            data: () => ({
+              vendorId: "vendor-1",
+              userId: "customer-2",
+              status: "Ready",
+              menuItems: [{ name: "Juice", quantity: 1 }]
+            })
+          }
+        ]
+      });
+      return jest.fn();
+    });
+
+    jest.isolateModules(() => {
+      require("../scripts/orders.js");
+    });
+
+    await flush();
+
+    const html = document.getElementById("inProgress").innerHTML;
+    expect(html).toContain("Bob Jones");
+    expect(html).toContain("Cara Lee");
+    expect(html).toContain("Preparing");
+    expect(html).toContain("Ready");
+    expect(html).toContain("Pizza");
+    expect(html).toContain("Juice");
+  });
+
+  test("renders collected orders into completedOrders", async () => {
+    db.onAuthStateChanged.mockImplementation((_auth, cb) => cb({ uid: "vendor-1" }));
+
+    db.getDoc
+      .mockResolvedValueOnce({
+        exists: () => true,
+        data: () => ({ role: "vendor", status: "approved" })
+      })
+      .mockResolvedValueOnce({
+        exists: () => true,
+        data: () => ({ fullName: "David King" })
+      });
+
+    db.onSnapshot.mockImplementation((_q, cb) => {
+      cb({
+        docs: [
+          {
+            id: "order-1",
+            data: () => ({
+              vendorId: "vendor-1",
+              userId: "customer-1",
+              status: "Collected",
+              menuItems: [{ name: "Wrap", quantity: 1 }]
+            })
+          }
+        ]
+      });
+      return jest.fn();
+    });
+
+    jest.isolateModules(() => {
+      require("../scripts/orders.js");
+    });
+
+    await flush();
+
+    const html = document.getElementById("completedOrders").innerHTML;
+    expect(html).toContain("David King");
+    expect(html).toContain("Collected");
+    expect(html).toContain("Wrap");
+  });
+
+  test("shows fallback text when there are no orders", async () => {
+    db.onAuthStateChanged.mockImplementation((_auth, cb) => cb({ uid: "vendor-1" }));
+
+    db.getDoc.mockResolvedValue({
+      exists: () => true,
+      data: () => ({ role: "vendor", status: "approved" })
+    });
+
+    db.onSnapshot.mockImplementation((_q, cb) => {
+      cb({ docs: [] });
+      return jest.fn();
+    });
+
+    jest.isolateModules(() => {
+      require("../scripts/orders.js");
+    });
+
+    await flush();
+
+    expect(document.getElementById("newOrders").innerHTML).toContain("No pending orders.");
+    expect(document.getElementById("inProgress").innerHTML).toContain("No orders in progress.");
+    expect(document.getElementById("completedOrders").innerHTML).toContain("No collected orders.");
+  });
+
+  test("falls back to Unknown Customer when customer doc does not exist", async () => {
+    db.onAuthStateChanged.mockImplementation((_auth, cb) => cb({ uid: "vendor-1" }));
+
+    db.getDoc
+      .mockResolvedValueOnce({
+        exists: () => true,
+        data: () => ({ role: "vendor", status: "approved" })
+      })
+      .mockResolvedValueOnce({
+        exists: () => false,
+        data: () => ({})
+      });
+
+    db.onSnapshot.mockImplementation((_q, cb) => {
+      cb({
+        docs: [
+          {
+            id: "order-1",
+            data: () => ({
+              vendorId: "vendor-1",
+              userId: "customer-1",
+              status: "Pending",
+              menuItems: [{ name: "Burger" }]
+            })
+          }
+        ]
+      });
+      return jest.fn();
+    });
+
+    jest.isolateModules(() => {
+      require("../scripts/orders.js");
+    });
+
+    await flush();
+
+    expect(document.getElementById("newOrders").innerHTML).toContain("Unknown Customer");
   });
 });

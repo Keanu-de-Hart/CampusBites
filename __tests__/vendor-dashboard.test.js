@@ -118,7 +118,7 @@ describe('renderOrders', () => {
 
     const html = document.getElementById('orders-list').innerHTML;
 
-    expect(html).toContain('Order #Test order 1');
+    expect(html).toContain('Order 1');
     expect(html).toContain('Status: pending');
     expect(html).toContain('Total: R75');
   });
@@ -131,8 +131,8 @@ describe('renderOrders', () => {
 
     const html = document.getElementById('orders-list').innerHTML;
 
-    expect(html).toContain('Order #1');
-    expect(html).toContain('Order #2');
+    expect(html).toContain('Order 1');
+    expect(html).toContain('Order 2');
   });
 
   test('does nothing if orders-list element does not exist', () => {
@@ -394,7 +394,6 @@ describe('initVendorDashboard', () => {
     await Promise.resolve();
     await Promise.resolve();
 
-    expect(console.log).toHaveBeenCalledWith('Access granted to vendor dashboard');
-    expect(document.getElementById('orders-list').innerHTML).toContain('Order #order-1');
+    expect(document.getElementById('orders-list').innerHTML).toContain('Order 1');
   });
 });

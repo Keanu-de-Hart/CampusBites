@@ -268,32 +268,58 @@ onAuthStateChanged(auth, async (user) => {
 });
 
 const vendorActions = {
-saveOrder: async () => {
-    //event.preventDefault();
-    let succeed = false;
+  saveOrder: async () => {
     if (!currentUser) {
       console.error("No user logged in");
       return;
     }
-    
-    const orderData = {
-        userId: currentUser.uid,
-        menuItems: cart,
-        status: "pending"
-    };
-    //console.log(orderData.userId, orderData.menuItems, orderData.status);
+
+    if (!cart.length) {
+      console.error("Cart is empty");
+      return;
+    }
+
     try {
+      // Group cart items by vendorId
+      const groupedByVendor = cart.reduce((acc, item) => {
+        const vendorId = item.vendorId;
+        if (!vendorId) return acc;
 
-      await addDoc(collection(db, "orders"), orderData);
-      succeed = true;
+        if (!acc[vendorId]) {
+          acc[vendorId] = [];
+        }
+
+        acc[vendorId].push(item);
+        return acc;
+      }, {});
+
+      // Create one order per vendor
+      const orderPromises = Object.entries(groupedByVendor).map(
+        async ([vendorId, items]) => {
+          const total = items.reduce((sum, item) => sum + (Number(item.price) || 0), 0);
+
+          const orderData = {
+            userId: currentUser.uid,
+            vendorId,
+            vendorName: items[0]?.vendorName || "",
+            menuItems: items,
+            status: "pending",
+            total
+          };
+
+          return addDoc(collection(db, "orders"), orderData);
+        }
+      );
+
+      await Promise.all(orderPromises);
+
+      cart = [];
+      window.location.href = "checkOut.html";
     } catch (error) {
-        console.error("Error saving item:", error);
+      console.error("Error saving orders:", error);
     }
-    if(succeed){
-      window.location.href = "checkOut.html"
-    }
-}
-
+  }
 };
+
 export const loadBrowseItems = loadMenuItems;
 export { loadMenuItems };
