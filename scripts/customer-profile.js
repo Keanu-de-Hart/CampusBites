@@ -37,11 +37,9 @@ function fillProfileFields(data) {
   document.getElementById("email").value = data.email || "";
   document.getElementById("phone").value = data.phone || "";
   document.getElementById("role").value = data.role || "";
-  document.getElementById("about").value = data.about || "";
 
   document.getElementById("profileName").textContent = data.fullName || "Customer Name";
   document.getElementById("profileEmail").textContent = data.email || "customer@email.com";
-  document.getElementById("profileAbout").textContent = data.about || "No bio added yet.";
 
   showProfileImage(data.image);
 }
@@ -120,7 +118,6 @@ export function initCustomerProfile() {
 
     const fullName = document.getElementById("fullName").value.trim();
     const phone = document.getElementById("phone").value.trim();
-    const about = document.getElementById("about").value.trim();
 
     try {
       let imageURL = currentUserData.image || null;
@@ -134,7 +131,6 @@ export function initCustomerProfile() {
       await updateDoc(userRef, {
         fullName,
         phone,
-        about,
         image: imageURL
       });
 
@@ -142,7 +138,6 @@ export function initCustomerProfile() {
         ...currentUserData,
         fullName,
         phone,
-        about,
         image: imageURL
       };
 

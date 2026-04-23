@@ -55,13 +55,11 @@ describe("customer-profile.js", () => {
       <img id="profileImage" class="hidden" />
       <h2 id="profileName"></h2>
       <p id="profileEmail"></p>
-      <p id="profileAbout"></p>
 
       <form id="profileForm">
         <input id="fullName" />
         <input id="email" />
         <input id="phone" />
-        <input id="about" />
         <input id="role" />
         <input id="profileImageInput" type="file" />
         <button type="submit">Save Changes</button>
@@ -79,7 +77,6 @@ describe("customer-profile.js", () => {
         fullName: "Ant",
         email: "ant@gmail.com",
         phone: "0712345678",
-        about: "I like burgers",
         role: "customer",
         image: "profile-image-url"
       })
@@ -97,12 +94,10 @@ describe("customer-profile.js", () => {
     expect(document.getElementById("fullName").value).toBe("Ant");
     expect(document.getElementById("email").value).toBe("ant@gmail.com");
     expect(document.getElementById("phone").value).toBe("0712345678");
-    expect(document.getElementById("about").value).toBe("I like burgers");
     expect(document.getElementById("role").value).toBe("customer");
 
     expect(document.getElementById("profileName").textContent).toBe("Ant");
     expect(document.getElementById("profileEmail").textContent).toBe("ant@gmail.com");
-    expect(document.getElementById("profileAbout").textContent).toBe("I like burgers");
     expect(document.getElementById("profileImage").src).toContain("profile-image-url");
   });
 
@@ -165,7 +160,6 @@ describe("customer-profile.js", () => {
         fullName: "Ant",
         email: "ant@gmail.com",
         phone: "",
-        about: "",
         role: "customer",
         image: "old-image-url"
       })
@@ -184,7 +178,6 @@ describe("customer-profile.js", () => {
 
     document.getElementById("fullName").value = "Ant Updated";
     document.getElementById("phone").value = "0798765432";
-    document.getElementById("about").value = "Updated bio";
 
     document.getElementById("profileForm").dispatchEvent(
       new Event("submit", { bubbles: true, cancelable: true })
@@ -196,7 +189,6 @@ describe("customer-profile.js", () => {
     expect(updateDoc).toHaveBeenCalledWith(expect.anything(), {
       fullName: "Ant Updated",
       phone: "0798765432",
-      about: "Updated bio",
       image: "old-image-url"
     });
 
@@ -247,7 +239,6 @@ describe("customer-profile.js", () => {
         fullName: "Ant",
         email: "ant@gmail.com",
         phone: "",
-        about: "",
         role: "customer",
         image: null
       })
@@ -295,7 +286,6 @@ describe("customer-profile.js", () => {
     expect(updateDoc).toHaveBeenCalledWith(expect.anything(), {
       fullName: "Ant",
       phone: "",
-      about: "",
       image: "new-image-url"
     });
   });
