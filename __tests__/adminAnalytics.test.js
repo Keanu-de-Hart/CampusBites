@@ -339,4 +339,206 @@ describe("adminAnalytics.js", () => {
     expect(window.jspdf.jsPDF).toHaveBeenCalled();
     expect(alert).toHaveBeenCalledWith("PDF exported successfully");
   });
+  test("updateCustomView blocks logged out users", async () => {
+  database.auth.currentUser = null;
+
+  await analytics.updateCustomView();
+
+  expect(alert).toHaveBeenCalledWith("You must be logged in.");
+});
+
+test("updateCustomView blocks non-admin users", async () => {
+  database.getDoc.mockResolvedValue({
+    exists: () => true,
+    data: () => ({ role: "customer" })
+  });
+
+  await analytics.updateCustomView();
+
+  expect(alert).toHaveBeenCalledWith("Access denied.");
+});
+
+test("updateCustomView handles missing user profile", async () => {
+  database.getDoc.mockResolvedValue({
+    exists: () => false
+  });
+
+  await analytics.updateCustomView();
+
+  expect(alert).toHaveBeenCalledWith("User profile not found.");
+});
+
+test("generateSampleData blocks when orders already exist", async () => {
+  database.getDoc.mockResolvedValue({
+    exists: () => true,
+    data: () => ({ role: "admin" })
+  });
+
+  database.getDocs.mockResolvedValueOnce({
+    empty: false,
+    docs: [{ id: "existing-order", data: () => ({ total: 100 }) }]
+  });
+
+  await analytics.generateSampleData();
+
+  expect(alert).toHaveBeenCalledWith("Orders already exist. Sample data was not generated.");
+  expect(database.addDoc).not.toHaveBeenCalled();
+});
+
+test("generateSampleData blocks when no approved vendors or items exist", async () => {
+  database.getDoc.mockResolvedValue({
+    exists: () => true,
+    data: () => ({ role: "admin" })
+  });
+
+  database.getDocs
+    .mockResolvedValueOnce({ empty: true, docs: [] }) // orders
+    .mockResolvedValueOnce({ docs: [] }) // vendors
+    .mockResolvedValueOnce({ docs: [] }); // menu_items
+
+  await analytics.generateSampleData();
+
+  expect(alert).toHaveBeenCalledWith(
+    "Need approved vendors and menu items before generating sample data."
+  );
+});
+
+test("generateSampleData creates sample orders successfully", async () => {
+  database.getDoc.mockResolvedValue({
+    exists: () => true,
+    data: () => ({ role: "admin" })
+  });
+
+  database.getDocs
+    .mockResolvedValueOnce({ empty: true, docs: [] }) // orders
+    .mockResolvedValueOnce({
+      docs: [
+        {
+          id: "vendor-1",
+          data: () => ({
+            role: "vendor",
+            status: "approved",
+            shopName: "Campus Grill"
+          })
+        }
+      ]
+    }) // vendors
+    .mockResolvedValueOnce({
+      docs: [
+        {
+          id: "item-1",
+          data: () => ({
+            name: "Burger",
+            price: 50,
+            vendorId: "vendor-1",
+            vendorName: "Campus Grill",
+            category: "Fast Food"
+          })
+        }
+      ]
+    }); // items
+
+  database.addDoc.mockResolvedValue({});
+
+  await analytics.generateSampleData();
+
+  expect(database.addDoc).toHaveBeenCalled();
+  expect(alert).toHaveBeenCalledWith("Sample analytics data generated successfully.");
+});
+
+test("updateCustomView handles items metric", async () => {
+  document.getElementById("report-metric").value = "items";
+
+  const recentDate = new Date("2026-04-20T10:00:00");
+
+  database.getDocs
+    .mockResolvedValueOnce({
+      docs: [
+        {
+          id: "order-1",
+          data: () => ({
+            vendorId: "vendor-1",
+            total: 120,
+            menuItems: [{ name: "Burger", quantity: 2 }],
+            createdAt: { toDate: () => recentDate }
+          })
+        }
+      ]
+    })
+    .mockResolvedValueOnce({
+      docs: [
+        {
+          id: "vendor-1",
+          data: () => ({
+            role: "vendor",
+            shopName: "Campus Grill",
+            status: "approved"
+          })
+        }
+      ]
+    });
+
+  await analytics.updateCustomView();
+
+  const lastHeader = document.querySelector("#custom-report-view thead tr th:last-child");
+  const html = document.getElementById("custom-report-body").innerHTML;
+
+  expect(lastHeader.textContent).toBe("Selected Metric (Items)");
+  expect(html).toContain(">2<");
+});
+
+test("exportCSV blocks non-admin users", async () => {
+  database.getDoc.mockResolvedValue({
+    exists: () => true,
+    data: () => ({ role: "customer" })
+  });
+
+  await analytics.exportCSV();
+
+  expect(alert).toHaveBeenCalledWith("Access denied.");
+});
+
+test("exportPDF blocks when jsPDF is missing", async () => {
+  database.getDoc.mockResolvedValue({
+    exists: () => true,
+    data: () => ({ role: "admin" })
+  });
+
+  delete window.jspdf;
+
+  await analytics.exportPDF();
+
+  expect(alert).toHaveBeenCalledWith("jsPDF library is not loaded.");
+});
+
+test("populateVendorFilter adds approved vendors to dropdown", async () => {
+  const { populateVendorFilter } = await import("../scripts/adminAnalytics.js");
+
+  database.getDocs.mockResolvedValue({
+    docs: [
+      {
+        id: "vendor-1",
+        data: () => ({
+          role: "vendor",
+          status: "approved",
+          shopName: "Campus Grill"
+        })
+      },
+      {
+        id: "vendor-2",
+        data: () => ({
+          role: "vendor",
+          status: "suspended",
+          shopName: "Blocked Shop"
+        })
+      }
+    ]
+  });
+
+  await populateVendorFilter();
+
+  const html = document.getElementById("report-vendor").innerHTML;
+  expect(html).toContain("Campus Grill");
+  expect(html).not.toContain("Blocked Shop");
+});
 });
