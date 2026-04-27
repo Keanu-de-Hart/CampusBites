@@ -228,10 +228,21 @@ describe("browse.js", () => {
     expect(alertSpy).toHaveBeenCalledWith("You must be logged in to proceed to checkout");
   });
 
-  test("creates one order per vendor on checkout", async () => {
+  test("posts cart menu item ids to /api/payfast/create-payment on Pay Now", async () => {
     mockBrowseQueries(db);
-    db.addDoc.mockResolvedValue({});
     db.onAuthStateChanged.mockImplementation((_auth, cb) => cb({ uid: "customer-1" }));
+
+    const fetchMock = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        action: "https://sandbox.payfast.co.za/eng/process",
+        fields: { merchant_id: "10000100", amount: "130.00", signature: "abc" },
+        m_payment_id: "cb_test"
+      })
+    });
+    global.fetch = fetchMock;
+
+    const submitSpy = jest.spyOn(HTMLFormElement.prototype, "submit").mockImplementation(() => {});
 
     const mod = await import("../scripts/browse.js");
     await mod.loadBrowseItems();
@@ -241,83 +252,33 @@ describe("browse.js", () => {
 
     document.getElementById("checkOut").click();
     await flush();
-
-    expect(db.addDoc).toHaveBeenCalledTimes(2);
-
-    expect(db.addDoc).toHaveBeenNthCalledWith(
-      1,
-      [{}, "orders"],
-      expect.objectContaining({
-        userId: "customer-1",
-        vendorId: "vendor-1",
-        vendorName: "Shop1",
-        status: "pending",
-        total: 50
-      })
-    );
-
-    expect(db.addDoc).toHaveBeenNthCalledWith(
-      2,
-      [{}, "orders"],
-      expect.objectContaining({
-        userId: "customer-1",
-        vendorId: "vendor-2",
-        vendorName: "Shop2",
-        status: "pending",
-        total: 80
-      })
-    );
-  });
-
-  test("groups same-vendor items into one order with summed total", async () => {
-    mockBrowseQueries(db, [
-      sampleItems[0],
-      {
-        id: "5",
-        name: "Fries",
-        vendorName: "Shop1",
-        vendorId: "vendor-1",
-        price: 20,
-        description: "Crispy",
-        category: "Sides",
-        available: true,
-        dietary: [],
-        allergens: []
-      }
-    ], [
-      { id: "vendor-1", role: "vendor", status: "approved", shopName: "Shop1" }
-    ]);
-
-    db.addDoc.mockResolvedValue({});
-    db.onAuthStateChanged.mockImplementation((_auth, cb) => cb({ uid: "customer-1" }));
-
-    const mod = await import("../scripts/browse.js");
-    await mod.loadBrowseItems();
-
-    document.getElementById("Shop1Burger").click();
-    document.getElementById("Shop1Fries").click();
-
-    document.getElementById("checkOut").click();
     await flush();
 
-    expect(db.addDoc).toHaveBeenCalledTimes(1);
-    expect(db.addDoc).toHaveBeenCalledWith(
-      [{}, "orders"],
-      expect.objectContaining({
-        userId: "customer-1",
-        vendorId: "vendor-1",
-        vendorName: "Shop1",
-        status: "pending",
-        total: 70,
-        menuItems: expect.any(Array)
-      })
-    );
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe("/api/payfast/create-payment");
+    const payload = JSON.parse(init.body);
+    expect(payload.userId).toBe("customer-1");
+    expect(payload.cart).toEqual([{ menuItemId: "1" }, { menuItemId: "2" }]);
+
+    expect(submitSpy).toHaveBeenCalled();
+
+    // No client-side order writes anymore — orders are created server-side by ITN.
+    expect(db.addDoc).not.toHaveBeenCalled();
+
+    submitSpy.mockRestore();
+    delete global.fetch;
   });
 
-  test("handles addDoc failure during checkout", async () => {
+  test("alerts and re-enables the button when payment init fails", async () => {
     mockBrowseQueries(db);
-    db.addDoc.mockRejectedValue(new Error("Firestore failed"));
     db.onAuthStateChanged.mockImplementation((_auth, cb) => cb({ uid: "customer-1" }));
+
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: false,
+      status: 500,
+      json: async () => ({ error: "boom" })
+    });
 
     const mod = await import("../scripts/browse.js");
     await mod.loadBrowseItems();
@@ -325,8 +286,12 @@ describe("browse.js", () => {
     document.getElementById("Shop1Burger").click();
     document.getElementById("checkOut").click();
     await flush();
+    await flush();
 
-    expect(errorSpy).toHaveBeenCalled();
+    expect(alertSpy).toHaveBeenCalledWith(expect.stringContaining("boom"));
+    expect(document.getElementById("checkOut").disabled).toBe(false);
+
+    delete global.fetch;
   });
 
   test("hides suspended vendor items", async () => {

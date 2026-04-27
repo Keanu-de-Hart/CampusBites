@@ -275,21 +275,19 @@ document.getElementById("cart")?.addEventListener("click", () => {
     document.getElementById('item-edit-modal').classList.remove('hidden');
     updateCart();
 }); 
-document.getElementById("checkOut").addEventListener("click", () => {
-  
-  if(loggedIn && currentUser){
-    if(cart.length == 0){
-      document.getElementById('cartWarning').classList.remove('hidden');
-      return;
-    }
-    vendorActions.saveOrder();
-    
-    
-    
-  } else {
-    alert("You must be logged in to proceed to checkout")
+document.getElementById("checkOut").addEventListener("click", async () => {
+  if (!loggedIn || !currentUser) {
+    alert("You must be logged in to proceed to checkout");
+    return;
   }
-}); 
+  if (cart.length === 0) {
+    const warn = document.getElementById('cartWarning');
+    if (warn) warn.classList.remove('hidden');
+    else alert("Your cart is empty.");
+    return;
+  }
+  await payfast.payNow();
+});
 
 
 onAuthStateChanged(auth, async (user) => {
@@ -304,56 +302,59 @@ onAuthStateChanged(auth, async (user) => {
   }
 });
 
-const vendorActions = {
-  saveOrder: async () => {
+const payfast = {
+  payNow: async () => {
     if (!currentUser) {
       console.error("No user logged in");
       return;
     }
-
     if (!cart.length) {
       console.error("Cart is empty");
       return;
     }
 
+    const btn = document.getElementById("checkOut");
+    if (btn) { btn.disabled = true; btn.textContent = "Redirecting..."; }
+
     try {
-      // Group cart items by vendorId
-      const groupedByVendor = cart.reduce((acc, item) => {
-        const vendorId = item.vendorId;
-        if (!vendorId) return acc;
+      const res = await fetch("/api/payfast/create-payment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: currentUser.uid,
+          cart: cart.map((i) => ({ menuItemId: i.id }))
+        })
+      });
 
-        if (!acc[vendorId]) {
-          acc[vendorId] = [];
-        }
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || `Payment init failed (${res.status})`);
+      }
 
-        acc[vendorId].push(item);
-        return acc;
-      }, {});
+      const { action, fields, m_payment_id } = await res.json();
 
-      // Create one order per vendor
-      const orderPromises = Object.entries(groupedByVendor).map(
-        async ([vendorId, items]) => {
-          const total = items.reduce((sum, item) => sum + (Number(item.price) || 0), 0);
+      // Stash the payment id so the success page can poll for it
+      try { sessionStorage.setItem("cb_pending_payment_id", m_payment_id); } catch {}
 
-          const orderData = {
-            userId: currentUser.uid,
-            vendorId,
-            vendorName: items[0]?.vendorName || "",
-            menuItems: items,
-            status: "pending",
-            total
-          };
-
-          return addDoc(collection(db, "orders"), orderData);
-        }
-      );
-
-      await Promise.all(orderPromises);
-
+      // Build a hidden form and submit to PayFast
+      const form = document.createElement("form");
+      form.method = "POST";
+      form.action = action;
+      form.style.display = "none";
+      for (const [key, value] of Object.entries(fields)) {
+        const input = document.createElement("input");
+        input.type = "hidden";
+        input.name = key;
+        input.value = value;
+        form.appendChild(input);
+      }
+      document.body.appendChild(form);
       cart = [];
-      window.location.href = "checkOut.html";
+      form.submit();
     } catch (error) {
-      console.error("Error saving orders:", error);
+      console.error("Error starting payment:", error);
+      alert("Could not start payment: " + error.message);
+      if (btn) { btn.disabled = false; btn.textContent = "Pay Now"; }
     }
   }
 };
