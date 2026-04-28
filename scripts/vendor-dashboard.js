@@ -45,82 +45,9 @@ export function initVendorDashboard(locationObj = window.location, alertFn = ale
       return;
     }
 
-    fillOperatingHours(userData);
-    attachOperatingHoursForm(user.uid, userData, alertFn);
-
     const orders = await fetchVendorOrders(user.uid);
     renderOrders(orders);
     attachOrderStatusListeners();
-  });
-}
-
-// ---------------- OPERATING HOURS ----------------
-export function formatOperatingHours(openingTime, closingTime) {
-  if (!openingTime || !closingTime) {
-    return "No operating hours set yet.";
-  }
-
-  return `${openingTime} - ${closingTime}`;
-}
-
-export function fillOperatingHours(userData) {
-  const openingTimeInput = document.getElementById("openingTime");
-  const closingTimeInput = document.getElementById("closingTime");
-  const savedOperatingHours = document.getElementById("savedOperatingHours");
-
-  if (openingTimeInput) {
-    openingTimeInput.value = userData.openingTime || "";
-  }
-
-  if (closingTimeInput) {
-    closingTimeInput.value = userData.closingTime || "";
-  }
-
-  if (savedOperatingHours) {
-    savedOperatingHours.textContent = formatOperatingHours(
-      userData.openingTime,
-      userData.closingTime
-    );
-  }
-}
-
-export function attachOperatingHoursForm(vendorId, userData, alertFn = alert) {
-  const operatingHoursForm = document.getElementById("operatingHoursForm");
-
-  if (!operatingHoursForm || operatingHoursForm.dataset.listenerAttached === "true") {
-    return;
-  }
-
-  operatingHoursForm.dataset.listenerAttached = "true";
-
-  operatingHoursForm.addEventListener("submit", async (event) => {
-    event.preventDefault();
-
-    const openingTime = document.getElementById("openingTime")?.value || "";
-    const closingTime = document.getElementById("closingTime")?.value || "";
-
-    if (!openingTime || !closingTime) {
-      alertFn("Please enter both opening and closing times.");
-      return;
-    }
-
-    if (openingTime >= closingTime) {
-      alertFn("Closing time must be after opening time.");
-      return;
-    }
-
-    const userRef = doc(db, "users", vendorId);
-
-    await updateDoc(userRef, {
-      openingTime,
-      closingTime
-    });
-
-    userData.openingTime = openingTime;
-    userData.closingTime = closingTime;
-
-    fillOperatingHours(userData);
-    alertFn("Operating hours updated successfully.");
   });
 }
 
