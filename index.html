@@ -178,5 +178,13 @@
   </section>
 </section>
 <script type="module" src="./scripts/index.js"></script>
+  <script type="module">
+    import { initAuthUI, logout } from "./scripts/auth.js";
+
+    initAuthUI();
+    lucide.createIcons();
+
+    document.getElementById("logoutBtn")?.addEventListener("click", logout);
+  </script>
 </body>
 </html>
