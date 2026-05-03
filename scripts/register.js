@@ -33,16 +33,28 @@ export function initRegisterUI() {
   const shopContainer = document.getElementById("shop-name-container");
   const locationContainer = document.getElementById("shop-location-container");
   const logoContainer = document.getElementById("shop-logo-container");
-  const payfastIdContainer = document.getElementById("payfast-merchant-id-container");
-  const payfastKeyContainer = document.getElementById("payfast-merchant-key-container");
-  const payfastEmailContainer = document.getElementById("payfast-email-container");
+  const bankNameContainer = document.getElementById("bank-name-container");
+  const accountHolderContainer = document.getElementById("account-holder-container");
+  const accountNumberContainer = document.getElementById("account-number-container");
+  const branchCodeContainer = document.getElementById("branch-code-container");
+  const accountTypeContainer = document.getElementById("account-type-container");
 
   const shopNameInput = document.getElementById("shop-name");
   const locationInput = document.getElementById("shop-location");
   const logoInput = document.getElementById("logoInput");
-  const payfastIdInput = document.getElementById("payfast-merchant-id");
-  const payfastKeyInput = document.getElementById("payfast-merchant-key");
-  const payfastEmailInput = document.getElementById("payfast-email");
+  const bankNameInput = document.getElementById("bank-name");
+  const accountHolderInput = document.getElementById("account-holder");
+  const accountNumberInput = document.getElementById("account-number");
+  const branchCodeInput = document.getElementById("branch-code");
+  const accountTypeInput = document.getElementById("account-type");
+
+  const bankFieldRefs = [
+    { container: bankNameContainer, input: bankNameInput },
+    { container: accountHolderContainer, input: accountHolderInput },
+    { container: accountNumberContainer, input: accountNumberInput },
+    { container: branchCodeContainer, input: branchCodeInput },
+    { container: accountTypeContainer, input: accountTypeInput }
+  ];
 
   const googleBtn = document.getElementById("googleRegister");
   const facebookBtn = document.getElementById("facebookRegister");
@@ -60,9 +72,11 @@ export function initRegisterUI() {
       const role = document.getElementById("registerRole")?.value || "";
       const shopName = document.getElementById("shop-name")?.value || "";
       const location = document.getElementById("shop-location")?.value || "";
-      const payfastMerchantId = document.getElementById("payfast-merchant-id")?.value.trim() || "";
-      const payfastMerchantKey = document.getElementById("payfast-merchant-key")?.value.trim() || "";
-      const payfastEmail = document.getElementById("payfast-email")?.value.trim() || "";
+      const bankName = document.getElementById("bank-name")?.value || "";
+      const accountHolder = document.getElementById("account-holder")?.value.trim() || "";
+      const accountNumber = document.getElementById("account-number")?.value.trim() || "";
+      const branchCode = document.getElementById("branch-code")?.value.trim() || "";
+      const accountType = document.getElementById("account-type")?.value || "";
 
       try {
         if (role === "vendor") {
@@ -72,12 +86,15 @@ export function initRegisterUI() {
           if (!isValidLogoFile(selectedLogoFile)) {
             return alert("Shop logo must be a PNG or JPEG image.");
           }
-          if (!payfastMerchantId) return alert("PayFast Merchant ID required");
-          if (!/^\d+$/.test(payfastMerchantId)) {
-            return alert("PayFast Merchant ID must contain only digits.");
+          if (!bankName) return alert("Bank required");
+          if (!accountHolder) return alert("Account holder name required");
+          if (!/^\d{6,12}$/.test(accountNumber)) {
+            return alert("Account number must be 6 to 12 digits.");
           }
-          if (!payfastMerchantKey) return alert("PayFast Merchant Key required");
-          if (!payfastEmail) return alert("PayFast payout email required");
+          if (!/^\d{6}$/.test(branchCode)) {
+            return alert("Branch code must be exactly 6 digits.");
+          }
+          if (!accountType) return alert("Account type required");
         }
 
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
@@ -89,6 +106,10 @@ export function initRegisterUI() {
           logoURL = await uploadLogo(selectedLogoFile, user.uid);
         }
 
+        const bankDetails = role === "vendor"
+          ? { bankName, accountHolder, accountNumber, branchCode, accountType }
+          : null;
+
         await setDoc(doc(db, "users", user.uid), {
           fullName,
           email,
@@ -96,9 +117,7 @@ export function initRegisterUI() {
           shopName: role === "vendor" ? shopName : null,
           location: role === "vendor" ? location : null,
           image: logoURL,
-          payfastMerchantId: role === "vendor" ? payfastMerchantId : null,
-          payfastMerchantKey: role === "vendor" ? payfastMerchantKey : null,
-          payfastEmail: role === "vendor" ? payfastEmail : null,
+          bankDetails,
           status: role === "vendor" ? "pending" : "approved",
           createdAt: serverTimestamp()
         });
@@ -122,37 +141,33 @@ export function initRegisterUI() {
         shopContainer?.classList.remove("hidden");
         locationContainer?.classList.remove("hidden");
         logoContainer?.classList.remove("hidden");
-        payfastIdContainer?.classList.remove("hidden");
-        payfastKeyContainer?.classList.remove("hidden");
-        payfastEmailContainer?.classList.remove("hidden");
+        bankFieldRefs.forEach(({ container, input }) => {
+          container?.classList.remove("hidden");
+          if (input) input.required = true;
+        });
 
         shopNameInput.required = true;
         locationInput.required = true;
         logoInput.required = true;
-        if (payfastIdInput) payfastIdInput.required = true;
-        if (payfastKeyInput) payfastKeyInput.required = true;
-        if (payfastEmailInput) payfastEmailInput.required = true;
       } else {
         shopContainer?.classList.add("hidden");
         locationContainer?.classList.add("hidden");
         logoContainer?.classList.add("hidden");
-        payfastIdContainer?.classList.add("hidden");
-        payfastKeyContainer?.classList.add("hidden");
-        payfastEmailContainer?.classList.add("hidden");
+        bankFieldRefs.forEach(({ container, input }) => {
+          container?.classList.add("hidden");
+          if (input) {
+            input.required = false;
+            input.value = "";
+          }
+        });
 
         shopNameInput.required = false;
         locationInput.required = false;
         logoInput.required = false;
-        if (payfastIdInput) payfastIdInput.required = false;
-        if (payfastKeyInput) payfastKeyInput.required = false;
-        if (payfastEmailInput) payfastEmailInput.required = false;
 
         shopNameInput.value = "";
         locationInput.value = "";
         logoInput.value = "";
-        if (payfastIdInput) payfastIdInput.value = "";
-        if (payfastKeyInput) payfastKeyInput.value = "";
-        if (payfastEmailInput) payfastEmailInput.value = "";
         selectedLogoFile = null;
       }
     });
@@ -263,9 +278,7 @@ export const buildUserObject = ({
   shopName,
   location,
   image,
-  payfastMerchantId,
-  payfastMerchantKey,
-  payfastEmail
+  bankDetails
 }) => {
   return {
     fullName,
@@ -274,9 +287,7 @@ export const buildUserObject = ({
     shopName: role === "vendor" ? shopName : null,
     location: role === "vendor" ? location : null,
     image: image || null,
-    payfastMerchantId: role === "vendor" ? (payfastMerchantId || null) : null,
-    payfastMerchantKey: role === "vendor" ? (payfastMerchantKey || null) : null,
-    payfastEmail: role === "vendor" ? (payfastEmail || null) : null,
+    bankDetails: role === "vendor" ? (bankDetails || null) : null,
     status: role === "vendor" ? "pending" : "approved"
   };
 };

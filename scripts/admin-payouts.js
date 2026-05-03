@@ -13,7 +13,35 @@ import {
 
 const fmt = (n) => `R${(Number(n) || 0).toFixed(2)}`;
 
+const BANK_LABELS = {
+  absa: "ABSA",
+  capitec: "Capitec",
+  discovery: "Discovery Bank",
+  fnb: "FNB",
+  investec: "Investec",
+  nedbank: "Nedbank",
+  standard_bank: "Standard Bank",
+  tymebank: "TymeBank",
+  african_bank: "African Bank",
+  bidvest: "Bidvest Bank"
+};
+
+const ACCOUNT_TYPE_LABELS = {
+  cheque: "Cheque",
+  savings: "Savings",
+  transmission: "Transmission"
+};
+
+const escapeCsv = (v) => {
+  const s = String(v ?? "");
+  return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+};
+
+const hasFullBankDetails = (b) =>
+  b && b.bankName && b.accountHolder && b.accountNumber && b.branchCode && b.accountType;
+
 let currentRole = null;
+let lastPayoutGroups = [];
 
 async function loadPayouts() {
   const tbody = document.getElementById("payouts-body");
@@ -67,27 +95,32 @@ async function loadPayouts() {
   const vendorDocs = await Promise.all(
     [...groups.keys()].map((vid) => getDoc(doc(db, "users", vid)))
   );
-  const payfastByVendor = new Map();
+  const bankByVendor = new Map();
   vendorDocs.forEach((s) => {
     if (!s.exists()) return;
     const u = s.data() || {};
-    payfastByVendor.set(s.id, {
-      merchantId: u.payfastMerchantId || null,
-      email: u.payfastEmail || null
-    });
+    bankByVendor.set(s.id, u.bankDetails || null);
   });
 
-  const rows = [...groups.values()]
+  const enriched = [...groups.values()].map((g) => ({
+    ...g,
+    bank: bankByVendor.get(g.vendorId) || null
+  }));
+  lastPayoutGroups = enriched;
+
+  const rows = enriched
     .sort((a, b) => b.total - a.total)
     .map((g) => {
-      const pf = payfastByVendor.get(g.vendorId) || {};
-      const merchantId = pf.merchantId
-        ? `<p class="font-mono text-gray-900">${pf.merchantId}</p>`
-        : `<p class="text-xs text-red-500">Not provided</p>`;
-      const email = pf.email
-        ? `<p class="text-xs text-gray-500">${pf.email}</p>`
-        : "";
-      const canPay = Boolean(pf.merchantId);
+      const b = g.bank;
+      const canPay = hasFullBankDetails(b);
+      const bankCell = canPay
+        ? `
+          <p class="font-medium text-gray-900">${BANK_LABELS[b.bankName] || b.bankName}</p>
+          <p class="text-xs text-gray-500">${b.accountHolder}</p>
+          <p class="font-mono text-xs text-gray-700">Acc ${b.accountNumber} &middot; Br ${b.branchCode}</p>
+          <p class="text-xs text-gray-500">${ACCOUNT_TYPE_LABELS[b.accountType] || b.accountType}</p>
+        `
+        : `<p class="text-xs text-red-500">Bank details incomplete</p>`;
       return `
       <tr data-vendor-id="${g.vendorId}">
         <td class="px-6 py-4">
@@ -95,8 +128,7 @@ async function loadPayouts() {
           <p class="text-xs text-gray-500">${g.vendorId}</p>
         </td>
         <td class="px-6 py-4">
-          ${merchantId}
-          ${email}
+          ${bankCell}
         </td>
         <td class="px-6 py-4 text-gray-700">${g.entries.length}</td>
         <td class="px-6 py-4 font-semibold text-indigo-600">${fmt(g.total)}</td>
@@ -104,7 +136,7 @@ async function loadPayouts() {
           <button
             class="mark-paid-btn bg-green-600 hover:bg-green-700 text-white text-sm px-3 py-2 rounded-lg disabled:opacity-50"
             data-vendor-id="${g.vendorId}"
-            ${canPay ? "" : "disabled title=\"Vendor has no PayFast Merchant ID on file\""}
+            ${canPay ? "" : "disabled title=\"Vendor has no banking details on file\""}
           >
             Mark as paid
           </button>
@@ -122,6 +154,53 @@ async function loadPayouts() {
   }
 }
 
+function exportEftBatchCsv() {
+  const payable = lastPayoutGroups.filter((g) => hasFullBankDetails(g.bank));
+  if (!payable.length) {
+    alert("No vendors with complete banking details to export.");
+    return;
+  }
+
+  const header = [
+    "vendor_id",
+    "vendor_name",
+    "bank",
+    "account_holder",
+    "account_number",
+    "branch_code",
+    "account_type",
+    "amount",
+    "reference"
+  ];
+  const lines = [header.join(",")];
+  for (const g of payable) {
+    const b = g.bank;
+    const reference = `CB-${g.vendorId.slice(0, 6)}`.toUpperCase();
+    lines.push([
+      g.vendorId,
+      g.vendorName,
+      BANK_LABELS[b.bankName] || b.bankName,
+      b.accountHolder,
+      b.accountNumber,
+      b.branchCode,
+      ACCOUNT_TYPE_LABELS[b.accountType] || b.accountType,
+      Number(g.total).toFixed(2),
+      reference
+    ].map(escapeCsv).join(","));
+  }
+
+  const csv = lines.join("\r\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `campusbites-payouts-${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 async function markVendorPaid(vendorId, entryIds) {
   if (!confirm(`Mark ${entryIds.length} ledger entries as paid out for vendor ${vendorId}?`)) {
     return false;
@@ -136,6 +215,17 @@ async function markVendorPaid(vendorId, entryIds) {
   ));
   return true;
 }
+
+document.addEventListener("click", (e) => {
+  const exportBtn = e.target.closest("#export-batch-btn");
+  if (exportBtn) {
+    if (currentRole !== "admin") {
+      alert("You must be signed in as admin to export the payout batch.");
+      return;
+    }
+    exportEftBatchCsv();
+  }
+});
 
 document.addEventListener("click", async (e) => {
   const btn = e.target.closest(".mark-paid-btn");
