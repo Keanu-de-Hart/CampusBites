@@ -346,7 +346,7 @@ const loadMenuItems = async () => {
     });
 
   const visibleItems = items
-  .filter(item => approvedVendorIds.has(item.vendorId))
+  .filter(item => approvedVendorIds.has(item.vendorId) && item.status === "approved")
   .map(item => {
     const vendor = vendorMap[item.vendorId];
 
