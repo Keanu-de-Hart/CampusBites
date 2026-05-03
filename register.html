@@ -139,6 +139,51 @@
                 <input type="file" id="logoInput"  accept=".png,.jpg,.jpeg,image/png,image/jpeg" />
               </section>
               </section>
+              <section id="payfast-merchant-id-container" class="hidden">
+                <label for="payfast-merchant-id" class="block text-sm font-medium text-gray-700 mb-1">
+                  PayFast Merchant ID
+                </label>
+                <section class="relative">
+                  <i data-lucide="credit-card" class="absolute left-3 top-3 h-5 w-5 text-gray-400"></i>
+                  <input
+                    type="text"
+                    id="payfast-merchant-id"
+                    inputmode="numeric"
+                    pattern="[0-9]*"
+                    class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    placeholder="e.g. 10000100"
+                  />
+                </section>
+              </section>
+              <section id="payfast-merchant-key-container" class="hidden">
+                <label for="payfast-merchant-key" class="block text-sm font-medium text-gray-700 mb-1">
+                  PayFast Merchant Key
+                </label>
+                <section class="relative">
+                  <i data-lucide="key" class="absolute left-3 top-3 h-5 w-5 text-gray-400"></i>
+                  <input
+                    type="text"
+                    id="payfast-merchant-key"
+                    autocomplete="off"
+                    class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    placeholder="Your PayFast merchant key"
+                  />
+                </section>
+              </section>
+              <section id="payfast-email-container" class="hidden">
+                <label for="payfast-email" class="block text-sm font-medium text-gray-700 mb-1">
+                  PayFast Payout Email
+                </label>
+                <section class="relative">
+                  <i data-lucide="at-sign" class="absolute left-3 top-3 h-5 w-5 text-gray-400"></i>
+                  <input
+                    type="email"
+                    id="payfast-email"
+                    class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    placeholder="Email linked to your PayFast account"
+                  />
+                </section>
+              </section>
               <button
                 type="submit"
                 class="w-full mt-4 bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 transition"

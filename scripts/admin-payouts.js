@@ -17,7 +17,7 @@ let currentRole = null;
 
 async function loadPayouts() {
   const tbody = document.getElementById("payouts-body");
-  tbody.innerHTML = `<tr><td colspan="4" class="px-6 py-8 text-center text-gray-400">Loading...</td></tr>`;
+  tbody.innerHTML = `<tr><td colspan="5" class="px-6 py-8 text-center text-gray-400">Loading...</td></tr>`;
 
   const ledgerCol = collection(db, "wallet_ledger");
   const snap = await getDocs(ledgerCol);
@@ -60,17 +60,43 @@ async function loadPayouts() {
   document.getElementById("summary-campus").textContent = fmt(campusReceived);
 
   if (groups.size === 0) {
-    tbody.innerHTML = `<tr><td colspan="4" class="px-6 py-8 text-center text-gray-400">No pending payouts.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="5" class="px-6 py-8 text-center text-gray-400">No pending payouts.</td></tr>`;
     return;
   }
 
+  const vendorDocs = await Promise.all(
+    [...groups.keys()].map((vid) => getDoc(doc(db, "users", vid)))
+  );
+  const payfastByVendor = new Map();
+  vendorDocs.forEach((s) => {
+    if (!s.exists()) return;
+    const u = s.data() || {};
+    payfastByVendor.set(s.id, {
+      merchantId: u.payfastMerchantId || null,
+      email: u.payfastEmail || null
+    });
+  });
+
   const rows = [...groups.values()]
     .sort((a, b) => b.total - a.total)
-    .map((g) => `
+    .map((g) => {
+      const pf = payfastByVendor.get(g.vendorId) || {};
+      const merchantId = pf.merchantId
+        ? `<p class="font-mono text-gray-900">${pf.merchantId}</p>`
+        : `<p class="text-xs text-red-500">Not provided</p>`;
+      const email = pf.email
+        ? `<p class="text-xs text-gray-500">${pf.email}</p>`
+        : "";
+      const canPay = Boolean(pf.merchantId);
+      return `
       <tr data-vendor-id="${g.vendorId}">
         <td class="px-6 py-4">
           <p class="font-medium text-gray-900">${g.vendorName}</p>
           <p class="text-xs text-gray-500">${g.vendorId}</p>
+        </td>
+        <td class="px-6 py-4">
+          ${merchantId}
+          ${email}
         </td>
         <td class="px-6 py-4 text-gray-700">${g.entries.length}</td>
         <td class="px-6 py-4 font-semibold text-indigo-600">${fmt(g.total)}</td>
@@ -78,12 +104,14 @@ async function loadPayouts() {
           <button
             class="mark-paid-btn bg-green-600 hover:bg-green-700 text-white text-sm px-3 py-2 rounded-lg disabled:opacity-50"
             data-vendor-id="${g.vendorId}"
+            ${canPay ? "" : "disabled title=\"Vendor has no PayFast Merchant ID on file\""}
           >
             Mark as paid
           </button>
         </td>
       </tr>
-    `).join("");
+    `;
+    }).join("");
 
   tbody.innerHTML = rows;
 
@@ -147,7 +175,7 @@ onAuthStateChanged(auth, async (user) => {
   if (role !== "admin") {
     warn?.classList.remove("hidden");
     document.getElementById("payouts-body").innerHTML =
-      `<tr><td colspan="4" class="px-6 py-8 text-center text-gray-400">Admins only.</td></tr>`;
+      `<tr><td colspan="5" class="px-6 py-8 text-center text-gray-400">Admins only.</td></tr>`;
     return;
   }
   warn?.classList.add("hidden");
