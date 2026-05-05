@@ -627,4 +627,35 @@ describe("browse.js", () => {
     expect(cart[0].name).toBe("Burger");
     expect(document.getElementById("details-modal").classList.contains("hidden")).toBe(true);
   });
+  test("handles items with no dietary or allergens", async () => {
+  mockBrowseQueries(db, [
+    {
+      id: "10",
+      name: "Simple Food",
+      vendorId: "vendor-1",
+      price: 20,
+      available: true,
+      status: "approved"
+    }
+  ]);
+
+  const mod = await import("../scripts/browse.js");
+  await mod.loadBrowseItems();
+
+  expect(document.getElementById("menu").innerHTML)
+    .toContain("Simple Food");
+});
+test("modal close button does nothing if missing", async () => {
+  mockBrowseQueries(db);
+
+  const mod = await import("../scripts/browse.js");
+  await mod.loadBrowseItems();
+
+  document.getElementById("details-modal").innerHTML = "";
+
+  // should not crash
+  expect(() => {
+    document.getElementById("closeDetailsModal")?.click();
+  }).not.toThrow();
+});
 });

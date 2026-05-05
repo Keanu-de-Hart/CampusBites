@@ -331,4 +331,50 @@ describe("admin-menuManagement.js", () => {
 
     expect(database.auth.signOut).toHaveBeenCalled();
   });
+test("handles unknown vendor", async () => {
+  database.getDoc.mockImplementation(async (ref) => {
+    if (ref.collectionName === "users" && ref.id === "admin123") {
+      return {
+        exists: () => true,
+        data: () => ({
+          role: "admin",
+          fullName: "Admin User"
+        })
+      };
+    }
+
+    if (ref.collectionName === "users" && ref.id === "vendor123") {
+      return {
+        exists: () => false,
+        data: () => ({})
+      };
+    }
+
+    return {
+      exists: () => false,
+      data: () => ({})
+    };
+  });
+
+  await import("../scripts/admin-menuManagement.js");
+
+  await flush();
+  await flush();
+
+  expect(document.body.innerHTML).toContain("Unknown Vendor");
+});
+test("handles approve failure", async () => {
+  database.updateDoc.mockRejectedValueOnce(new Error("fail"));
+
+  await import("../scripts/admin-menuManagement.js");
+
+  await flush();
+  await flush();
+
+  document.querySelector(".approve-btn").click();
+
+  await flush();
+
+  expect(alert).toHaveBeenCalledWith("Failed to approve menu item.");
+});
 });
