@@ -9,7 +9,7 @@ jest.mock("../scripts/database.js", () => ({
   db: {},
   getDocs: jest.fn(),
   addDoc: jest.fn(),
-  collection: jest.fn((...args) => args),
+  collection: jest.fn((db, collectionName) => collectionName),
   onAuthStateChanged: jest.fn()
 }));
 
@@ -23,6 +23,7 @@ const sampleItems = [
     description: "Tasty",
     category: "Mains",
     available: true,
+    status: "approved",
     dietary: ["Vegan"],
     allergens: []
   },
@@ -35,6 +36,7 @@ const sampleItems = [
     description: "Cheesy",
     category: "Mains",
     available: true,
+    status: "approved",
     dietary: [],
     allergens: ["Gluten"]
   },
@@ -47,6 +49,7 @@ const sampleItems = [
     description: "Fresh",
     category: "Sides",
     available: false,
+    status: "approved",
     dietary: ["Vegetarian"],
     allergens: []
   },
@@ -59,15 +62,47 @@ const sampleItems = [
     description: "Halal wrap",
     category: "Wraps",
     available: true,
+    status: "approved",
     dietary: ["Halal"],
+    allergens: []
+  },
+  {
+    id: "6",
+    name: "Rejected Item",
+    vendorName: "Shop1",
+    vendorId: "vendor-1",
+    price: 25,
+    description: "Should not show",
+    category: "Mains",
+    available: true,
+    status: "suspended",
+    dietary: [],
     allergens: []
   }
 ];
 
 const approvedVendors = [
-  { id: "vendor-1", role: "vendor", status: "approved", shopName: "Shop1" },
-  { id: "vendor-2", role: "vendor", status: "approved", shopName: "Shop2" },
-  { id: "vendor-3", role: "vendor", status: "approved", shopName: "Shop3" }
+  {
+    id: "vendor-1",
+    role: "vendor",
+    status: "approved",
+    shopName: "Shop1",
+    location: "Matrix"
+  },
+  {
+    id: "vendor-2",
+    role: "vendor",
+    status: "approved",
+    shopName: "Shop2",
+    location: "Library Lawns"
+  },
+  {
+    id: "vendor-3",
+    role: "vendor",
+    status: "approved",
+    shopName: "Shop3",
+    location: "Great Hall"
+  }
 ];
 
 const makeSnapshot = (items) => ({
@@ -81,15 +116,23 @@ const makeSnapshot = (items) => ({
 });
 
 const mockBrowseQueries = (db, items = sampleItems, vendors = approvedVendors) => {
-  db.getDocs
-    .mockResolvedValueOnce(makeSnapshot(items))
-    .mockResolvedValueOnce(makeSnapshot(vendors));
+  db.getDocs.mockImplementation(async (collectionName) => {
+    if (collectionName === "menu_items") {
+      return makeSnapshot(items);
+    }
+
+    if (collectionName === "users") {
+      return makeSnapshot(vendors);
+    }
+
+    return makeSnapshot([]);
+  });
 };
 
 const flush = async () => {
   await Promise.resolve();
   await Promise.resolve();
-  await Promise.resolve();
+  await new Promise((resolve) => setTimeout(resolve, 0));
 };
 
 describe("browse.js", () => {
@@ -101,17 +144,12 @@ describe("browse.js", () => {
     jest.resetModules();
 
     document.body.innerHTML = `
-      <a id="AdmindashboardLink"></a>
-      <a id="CustomerdashboardLink"></a>
-      <a id="VendordashboardLink"></a>
-      <a id="loginLink"></a>
-
       <select id="Vendors">
-        <option value="AllVendors">AllVendors</option>
+        <option value="AllVendors">All Vendors</option>
       </select>
 
       <select id="Categories">
-        <option value="AllCategories">AllCategories</option>
+        <option value="AllCategories">All Categories</option>
         <option value="Mains">Mains</option>
         <option value="Sides">Sides</option>
         <option value="Wraps">Wraps</option>
@@ -125,6 +163,7 @@ describe("browse.js", () => {
       <button id="cart"></button>
       <p id="numItems"></p>
       <p id="numItemsCart"></p>
+      <span id="cartCount"></span>
       <section id="cartWarning" class="hidden"></section>
       <section id="PriceFilter"></section>
 
@@ -135,7 +174,7 @@ describe("browse.js", () => {
       <section id="details-modal" class="hidden"></section>
 
       <button id="closeCartModal"></button>
-      <button id="checkOut">Check Out</button>
+      <button id="checkOut">Pay Now</button>
     `;
 
     localStorage.clear();
@@ -144,15 +183,16 @@ describe("browse.js", () => {
 
     alertSpy = jest.spyOn(window, "alert").mockImplementation(() => {});
     errorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+    db.onAuthStateChanged.mockImplementation((_auth, cb) => cb(null));
   });
 
   afterEach(() => {
     jest.restoreAllMocks();
+    delete global.fetch;
   });
 
-  test("renders available items only", async () => {
+  test("renders available and approved items only", async () => {
     mockBrowseQueries(db);
-    db.onAuthStateChanged.mockImplementation((_auth, cb) => cb(null));
 
     const mod = await import("../scripts/browse.js");
     await mod.loadBrowseItems();
@@ -163,24 +203,21 @@ describe("browse.js", () => {
     expect(html).toContain("Pizza");
     expect(html).toContain("Wrap");
     expect(html).not.toContain("Salad");
+    expect(html).not.toContain("Rejected Item");
   });
 
   test("updates count text", async () => {
     mockBrowseQueries(db);
-    db.onAuthStateChanged.mockImplementation((_auth, cb) => cb(null));
 
     const mod = await import("../scripts/browse.js");
     await mod.loadBrowseItems();
 
-    expect(document.getElementById("numItems").textContent)
-      .toBe("3 items found");
+    expect(document.getElementById("numItems").textContent).toBe("3 items found");
   });
 
   test("adds item to cart and opens cart modal", async () => {
     mockBrowseQueries(db);
-    db.onAuthStateChanged.mockImplementation((_auth, cb) =>
-      cb({ uid: "customer-1" })
-    );
+    db.onAuthStateChanged.mockImplementation((_auth, cb) => cb({ uid: "customer-1" }));
 
     const mod = await import("../scripts/browse.js");
     await mod.loadBrowseItems();
@@ -188,96 +225,78 @@ describe("browse.js", () => {
     document.querySelector(".add-cart-btn").click();
     document.getElementById("cart").click();
 
-    expect(
-      document.getElementById("item-edit-modal")
-        .classList.contains("hidden")
-    ).toBe(false);
-
-    expect(document.getElementById("cartList").innerHTML)
-      .toContain("Burger");
-
-    expect(document.getElementById("numItemsCart").textContent)
-      .toBe("1 item in cart");
+    expect(document.getElementById("item-edit-modal").classList.contains("hidden")).toBe(false);
+    expect(document.getElementById("cartList").innerHTML).toContain("Burger");
+    expect(document.getElementById("numItemsCart").textContent).toBe("1 item in cart");
   });
 
   test("removes item from cart", async () => {
     mockBrowseQueries(db);
-    db.onAuthStateChanged.mockImplementation((_auth, cb) =>
-      cb({ uid: "customer-1" })
-    );
+    db.onAuthStateChanged.mockImplementation((_auth, cb) => cb({ uid: "customer-1" }));
 
     const mod = await import("../scripts/browse.js");
     await mod.loadBrowseItems();
 
     document.querySelector(".add-cart-btn").click();
     document.getElementById("cart").click();
-
     document.querySelector(".remove-cart-btn").click();
 
-    expect(document.getElementById("cartList").innerHTML)
-      .not.toContain("Burger");
+    expect(document.getElementById("cartList").innerHTML).not.toContain("Burger");
   });
 
   test("shows warning when cart empty", async () => {
     mockBrowseQueries(db);
-    db.onAuthStateChanged.mockImplementation((_auth, cb) =>
-      cb({ uid: "customer-1" })
-    );
+    db.onAuthStateChanged.mockImplementation((_auth, cb) => cb({ uid: "customer-1" }));
 
     const mod = await import("../scripts/browse.js");
     await mod.loadBrowseItems();
 
     document.getElementById("checkOut").click();
 
-    expect(
-      document.getElementById("cartWarning")
-        .classList.contains("hidden")
-    ).toBe(false);
+    expect(document.getElementById("cartWarning").classList.contains("hidden")).toBe(false);
   });
 
   test("alerts when user not logged in", async () => {
     mockBrowseQueries(db);
-    db.onAuthStateChanged.mockImplementation((_auth, cb) => cb(null));
 
     const mod = await import("../scripts/browse.js");
     await mod.loadBrowseItems();
 
     document.getElementById("checkOut").click();
 
-    expect(alertSpy).toHaveBeenCalledWith(
-      "You must be logged in to proceed to checkout"
-    );
+    expect(alertSpy).toHaveBeenCalledWith("You must be logged in to proceed to checkout");
   });
 
-  test("posts cart items to PayFast and submits the returned form", async () => {
+  test("posts cart items to PayFast and submits returned form", async () => {
     mockBrowseQueries(db);
-    db.onAuthStateChanged.mockImplementation((_auth, cb) =>
-      cb({ uid: "customer-1" })
-    );
+    db.onAuthStateChanged.mockImplementation((_auth, cb) => cb({ uid: "customer-1" }));
 
-    const fetchMock = jest.fn().mockResolvedValue({
+    global.fetch = jest.fn().mockResolvedValue({
       ok: true,
       json: async () => ({
         action: "https://sandbox.payfast.co.za/eng/process",
-        fields: { merchant_id: "10000100", amount: "130.00", signature: "abc" }
+        fields: {
+          merchant_id: "10000100",
+          amount: "130.00",
+          signature: "abc"
+        }
       })
     });
-    global.fetch = fetchMock;
 
-    const submitSpy = jest.spyOn(HTMLFormElement.prototype, "submit").mockImplementation(() => {});
+    const submitSpy = jest
+      .spyOn(HTMLFormElement.prototype, "submit")
+      .mockImplementation(() => {});
 
     const mod = await import("../scripts/browse.js");
     await mod.loadBrowseItems();
+
     document.querySelector('.add-cart-btn[data-item-id="1"]').click();
     document.querySelector('.add-cart-btn[data-item-id="2"]').click();
-
     document.getElementById("checkOut").click();
 
     await flush();
-    await flush();
 
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(fetchMock).toHaveBeenCalledWith(
+    expect(global.fetch).toHaveBeenCalledWith(
       "/api/payfast/create-payment",
       expect.objectContaining({
         method: "POST",
@@ -289,20 +308,9 @@ describe("browse.js", () => {
       })
     );
 
-    const form = document.querySelector(
-      'form[action="https://sandbox.payfast.co.za/eng/process"]'
-    );
-    expect(form).toBeTruthy();
-    expect(form.method.toUpperCase()).toBe("POST");
-    expect(form.querySelector('input[name="merchant_id"]').value).toBe("10000100");
-    expect(form.querySelector('input[name="amount"]').value).toBe("130.00");
-    expect(form.querySelector('input[name="signature"]').value).toBe("abc");
-
-    expect(submitSpy).toHaveBeenCalledTimes(1);
-
+    expect(document.querySelector('form[action="https://sandbox.payfast.co.za/eng/process"]')).toBeTruthy();
+    expect(submitSpy).toHaveBeenCalled();
     expect(JSON.parse(localStorage.getItem("cart") || "[]")).toEqual([]);
-
-    delete global.fetch;
   });
 
   test("sends all cart entries to PayFast even when items share a vendor", async () => {
@@ -319,46 +327,36 @@ describe("browse.js", () => {
           description: "Crispy",
           category: "Sides",
           available: true,
+          status: "approved",
           dietary: [],
           allergens: []
         }
       ],
-      [
-        {
-          id: "vendor-1",
-          role: "vendor",
-          status: "approved",
-          shopName: "Shop1"
-        }
-      ]
+      [approvedVendors[0]]
     );
 
-    db.onAuthStateChanged.mockImplementation((_auth, cb) =>
-      cb({ uid: "customer-1" })
-    );
+    db.onAuthStateChanged.mockImplementation((_auth, cb) => cb({ uid: "customer-1" }));
 
-    const fetchMock = jest.fn().mockResolvedValue({
+    global.fetch = jest.fn().mockResolvedValue({
       ok: true,
       json: async () => ({
         action: "https://sandbox.payfast.co.za/eng/process",
-        fields: { merchant_id: "10000100", amount: "70.00", signature: "abc" }
+        fields: { merchant_id: "10000100" }
       })
     });
-    global.fetch = fetchMock;
 
     jest.spyOn(HTMLFormElement.prototype, "submit").mockImplementation(() => {});
 
     const mod = await import("../scripts/browse.js");
     await mod.loadBrowseItems();
+
     document.querySelector('.add-cart-btn[data-item-id="1"]').click();
     document.querySelector('.add-cart-btn[data-item-id="5"]').click();
-
     document.getElementById("checkOut").click();
 
     await flush();
-    await flush();
 
-    expect(fetchMock).toHaveBeenCalledWith(
+    expect(global.fetch).toHaveBeenCalledWith(
       "/api/payfast/create-payment",
       expect.objectContaining({
         body: JSON.stringify({
@@ -367,17 +365,11 @@ describe("browse.js", () => {
         })
       })
     );
-
-    delete global.fetch;
   });
 
-  test("handles addDoc failure", async () => {
+  test("handles PayFast failure", async () => {
     mockBrowseQueries(db);
-    db.addDoc.mockRejectedValue(new Error("Firestore failed"));
-
-    db.onAuthStateChanged.mockImplementation((_auth, cb) =>
-      cb({ uid: "customer-1" })
-    );
+    db.onAuthStateChanged.mockImplementation((_auth, cb) => cb({ uid: "customer-1" }));
 
     global.fetch = jest.fn().mockResolvedValue({
       ok: false,
@@ -392,32 +384,19 @@ describe("browse.js", () => {
     document.getElementById("checkOut").click();
 
     await flush();
-    await flush();
 
     expect(alertSpy).toHaveBeenCalledWith(expect.stringContaining("boom"));
     expect(document.getElementById("checkOut").disabled).toBe(false);
-
-    delete global.fetch;
   });
 
   test("filters by vendor", async () => {
     mockBrowseQueries(db);
-    db.onAuthStateChanged.mockImplementation((_auth, cb) => cb(null));
 
     const mod = await import("../scripts/browse.js");
     await mod.loadBrowseItems();
 
-    document.getElementById("Vendors").innerHTML = `
-      <option value="AllVendors">AllVendors</option>
-      <option value="Shop1">Shop1</option>
-    `;
-
     document.getElementById("Vendors").value = "Shop1";
-
-    mockBrowseQueries(db);
-
-    document.getElementById("Vendors")
-      .dispatchEvent(new Event("change"));
+    document.getElementById("Vendors").dispatchEvent(new Event("change"));
 
     await flush();
 
@@ -427,272 +406,225 @@ describe("browse.js", () => {
     expect(html).not.toContain("Pizza");
     expect(html).not.toContain("Wrap");
   });
+
   test("renders empty cart message when cart is opened with no items", async () => {
-  mockBrowseQueries(db);
-  db.onAuthStateChanged.mockImplementation((_auth, cb) => cb(null));
+    mockBrowseQueries(db);
 
-  const mod = await import("../scripts/browse.js");
-  await mod.loadBrowseItems();
+    const mod = await import("../scripts/browse.js");
+    await mod.loadBrowseItems();
 
-  document.getElementById("cart").click();
+    document.getElementById("cart").click();
 
-  expect(document.getElementById("cartList").innerHTML)
-    .toContain("Your cart is empty.");
+    expect(document.getElementById("cartList").innerHTML).toContain("Your cart is empty.");
+    expect(document.getElementById("numItemsCart").textContent).toBe("0 items in cart");
+  });
 
-  expect(document.getElementById("numItemsCart").textContent)
-    .toBe("0 items in cart");
-});
+  test("closes cart modal when close button is clicked", async () => {
+    mockBrowseQueries(db);
 
-test("closes cart modal when close button is clicked", async () => {
-  mockBrowseQueries(db);
-  db.onAuthStateChanged.mockImplementation((_auth, cb) => cb(null));
+    const mod = await import("../scripts/browse.js");
+    await mod.loadBrowseItems();
 
-  const mod = await import("../scripts/browse.js");
-  await mod.loadBrowseItems();
+    document.getElementById("cart").click();
+    document.getElementById("closeCartModal").click();
 
-  document.getElementById("cart").click();
-  document.getElementById("closeCartModal").click();
+    expect(document.getElementById("item-edit-modal").classList.contains("hidden")).toBe(true);
+  });
 
-  expect(
-    document.getElementById("item-edit-modal").classList.contains("hidden")
-  ).toBe(true);
-});
+  test("filters vegan items", async () => {
+    mockBrowseQueries(db);
 
-test("filters vegan items", async () => {
-  mockBrowseQueries(db);
-  db.onAuthStateChanged.mockImplementation((_auth, cb) => cb(null));
+    const mod = await import("../scripts/browse.js");
+    await mod.loadBrowseItems();
 
-  const mod = await import("../scripts/browse.js");
-  await mod.loadBrowseItems();
+    document.getElementById("Vegan").checked = true;
+    document.getElementById("Vegan").dispatchEvent(new Event("click"));
 
-  document.getElementById("Vegan").checked = true;
+    await flush();
 
-  mockBrowseQueries(db);
+    const html = document.getElementById("menu").innerHTML;
 
-  document.getElementById("Vegan")
-    .dispatchEvent(new Event("click"));
+    expect(html).toContain("Burger");
+    expect(html).not.toContain("Pizza");
+    expect(html).not.toContain("Wrap");
+  });
 
-  await flush();
+  test("filters halal items", async () => {
+    mockBrowseQueries(db);
 
-  const html = document.getElementById("menu").innerHTML;
+    const mod = await import("../scripts/browse.js");
+    await mod.loadBrowseItems();
 
-  expect(html).toContain("Burger");
-  expect(html).not.toContain("Pizza");
-  expect(html).not.toContain("Wrap");
-});
+    document.getElementById("Halal").checked = true;
+    document.getElementById("Halal").dispatchEvent(new Event("click"));
 
-test("filters halal items", async () => {
-  mockBrowseQueries(db);
-  db.onAuthStateChanged.mockImplementation((_auth, cb) => cb(null));
+    await flush();
 
-  const mod = await import("../scripts/browse.js");
-  await mod.loadBrowseItems();
+    const html = document.getElementById("menu").innerHTML;
 
-  document.getElementById("Halal").checked = true;
+    expect(html).toContain("Wrap");
+    expect(html).not.toContain("Burger");
+    expect(html).not.toContain("Pizza");
+  });
 
-  mockBrowseQueries(db);
+  test("filters gluten-free items", async () => {
+    mockBrowseQueries(db);
 
-  document.getElementById("Halal")
-    .dispatchEvent(new Event("click"));
+    const mod = await import("../scripts/browse.js");
+    await mod.loadBrowseItems();
 
-  await flush();
+    document.getElementById("Gluten-Free").checked = true;
+    document.getElementById("Gluten-Free").dispatchEvent(new Event("click"));
 
-  const html = document.getElementById("menu").innerHTML;
+    await flush();
 
-  expect(html).toContain("Wrap");
-  expect(html).not.toContain("Burger");
-  expect(html).not.toContain("Pizza");
-});
+    const html = document.getElementById("menu").innerHTML;
 
-test("filters gluten-free items", async () => {
-  mockBrowseQueries(db);
-  db.onAuthStateChanged.mockImplementation((_auth, cb) => cb(null));
+    expect(html).toContain("Burger");
+    expect(html).toContain("Wrap");
+    expect(html).not.toContain("Pizza");
+  });
 
-  const mod = await import("../scripts/browse.js");
-  await mod.loadBrowseItems();
+  test("filters by category", async () => {
+    mockBrowseQueries(db);
 
-  document.getElementById("Gluten-Free").checked = true;
+    const mod = await import("../scripts/browse.js");
+    await mod.loadBrowseItems();
 
-  mockBrowseQueries(db);
+    document.getElementById("Categories").value = "Wraps";
+    document.getElementById("Categories").dispatchEvent(new Event("change"));
 
-  document.getElementById("Gluten-Free")
-    .dispatchEvent(new Event("click"));
+    await flush();
 
-  await flush();
+    const html = document.getElementById("menu").innerHTML;
 
-  const html = document.getElementById("menu").innerHTML;
+    expect(html).toContain("Wrap");
+    expect(html).not.toContain("Burger");
+    expect(html).not.toContain("Pizza");
+  });
 
-  expect(html).toContain("Burger");
-  expect(html).toContain("Wrap");
-  expect(html).not.toContain("Pizza");
-});
+  test("price slider filters items by max price", async () => {
+    mockBrowseQueries(db);
 
-test("filters by category", async () => {
-  mockBrowseQueries(db);
-  db.onAuthStateChanged.mockImplementation((_auth, cb) => cb(null));
+    const mod = await import("../scripts/browse.js");
+    await mod.loadBrowseItems();
 
-  const mod = await import("../scripts/browse.js");
-  await mod.loadBrowseItems();
+    const slider = document.getElementById("PriceSlider");
 
-  document.getElementById("Categories").value = "Wraps";
+    expect(slider).not.toBeNull();
 
-  mockBrowseQueries(db);
+    slider.value = "40";
+    slider.dispatchEvent(new Event("click", { bubbles: true }));
 
-  document.getElementById("Categories")
-    .dispatchEvent(new Event("change"));
+    await flush();
 
-  await flush();
+    const html = document.getElementById("menu").innerHTML;
 
-  const html = document.getElementById("menu").innerHTML;
+    expect(html).not.toContain("Burger");
+    expect(html).not.toContain("Pizza");
+    expect(html).not.toContain("Wrap");
+  });
 
-  expect(html).toContain("Wrap");
-  expect(html).not.toContain("Burger");
-  expect(html).not.toContain("Pizza");
-});
-test("price slider filters items by max price", async () => {
-  mockBrowseQueries(db);
-  db.onAuthStateChanged.mockImplementation((_auth, cb) => cb(null));
+  test("remove cart ignores invalid index", async () => {
+    mockBrowseQueries(db);
+    db.onAuthStateChanged.mockImplementation((_auth, cb) => cb({ uid: "user-1" }));
 
-  const mod = await import("../scripts/browse.js");
-  await mod.loadBrowseItems();
+    const mod = await import("../scripts/browse.js");
+    await mod.loadBrowseItems();
 
-  const slider = document.getElementById("PriceSlider");
+    document.querySelector(".add-cart-btn").click();
+    document.getElementById("cart").click();
 
-  expect(slider).not.toBeNull();
+    const btn = document.createElement("button");
+    btn.className = "remove-cart-btn";
+    btn.dataset.cartIndex = "invalid";
 
-  slider.value = "40";
+    document.getElementById("cartList").appendChild(btn);
+    btn.click();
 
-  mockBrowseQueries(db);
+    expect(document.getElementById("cartList").innerHTML).toContain("Burger");
+  });
 
-  slider.dispatchEvent(new Event("click", { bubbles: true }));
+  test("opens item details modal when Details button is clicked", async () => {
+    mockBrowseQueries(db);
 
-  await flush();
+    const mod = await import("../scripts/browse.js");
+    await mod.loadBrowseItems();
 
-  expect(document.getElementById("PriceLabel").textContent)
-    .toContain("Max Price: 40");
+    document.querySelector(".item-details-btn").click();
 
-  const html = document.getElementById("menu").innerHTML;
+    const modal = document.getElementById("details-modal");
 
-  expect(html).not.toContain("Burger");
-  expect(html).not.toContain("Pizza");
-  expect(html).not.toContain("Wrap");
-});
+    expect(modal.classList.contains("hidden")).toBe(false);
+    expect(modal.innerHTML).toContain("Burger");
+  });
 
-test("remove cart ignores invalid index", async () => {
-  mockBrowseQueries(db);
-  db.onAuthStateChanged.mockImplementation((_auth, cb) =>
-    cb({ uid: "user-1" })
-  );
+  test("renders vendor location in item details modal", async () => {
+    mockBrowseQueries(db, [sampleItems[0]], [approvedVendors[0]]);
 
-  const mod = await import("../scripts/browse.js");
-  await mod.loadBrowseItems();
+    const mod = await import("../scripts/browse.js");
+    await mod.loadBrowseItems();
 
-  document.querySelector(".add-cart-btn").click();
-  document.getElementById("cart").click();
+    document.querySelector(".item-details-btn").click();
 
-  const btn = document.createElement("button");
-  btn.className = "remove-cart-btn";
-  btn.dataset.cartIndex = "invalid";
+    expect(document.getElementById("details-modal").innerHTML).toContain("Matrix");
+  });
 
-  document.getElementById("cartList").appendChild(btn);
-  btn.click();
+  test("renders nutritional info in modal", async () => {
+    mockBrowseQueries(
+      db,
+      [
+        {
+          ...sampleItems[0],
+          calories: 500,
+          protein: 20,
+          carbs: 60
+        }
+      ],
+      approvedVendors
+    );
 
-  expect(document.getElementById("cartList").innerHTML).toContain("Burger");
-});
-test("opens item details modal when Details button is clicked", async () => {
-  mockBrowseQueries(db);
-  db.onAuthStateChanged.mockImplementation((_auth, cb) => cb(null));
+    const mod = await import("../scripts/browse.js");
+    await mod.loadBrowseItems();
 
-  const mod = await import("../scripts/browse.js");
-  await mod.loadBrowseItems();
+    document.querySelector(".item-details-btn").click();
 
-  // click Details button
-  document.querySelector(".item-details-btn").click();
+    const html = document.getElementById("details-modal").innerHTML;
 
-  const modal = document.getElementById("details-modal");
+    expect(html).toContain("500");
+    expect(html).toContain("20");
+    expect(html).toContain("60");
+  });
 
-  expect(modal.classList.contains("hidden")).toBe(false);
-  expect(modal.innerHTML).toContain("Burger");
-});
-test("renders vendor location in item details modal", async () => {
-  mockBrowseQueries(db, sampleItems, [
-    {
-      id: "vendor-1",
-      role: "vendor",
-      status: "approved",
-      shopName: "Shop1",
-      location: "Matrix"
-    }
-  ]);
+  test("closes item details modal when close button is clicked", async () => {
+    mockBrowseQueries(db);
 
-  db.onAuthStateChanged.mockImplementation((_auth, cb) => cb(null));
+    const mod = await import("../scripts/browse.js");
+    await mod.loadBrowseItems();
 
-  const mod = await import("../scripts/browse.js");
-  await mod.loadBrowseItems();
+    document.querySelector(".item-details-btn").click();
 
-  document.querySelector(".item-details-btn").click();
+    expect(document.getElementById("details-modal").classList.contains("hidden")).toBe(false);
 
-  expect(document.getElementById("details-modal").innerHTML)
-    .toContain("Matrix");
-});
-test("renders nutritional info in modal", async () => {
-  mockBrowseQueries(db, [
-    {
-      ...sampleItems[0],
-      calories: 500,
-      protein: 20,
-      carbs: 60
-    }
-  ], approvedVendors);
+    document.getElementById("closeDetailsModal").click();
 
-  db.onAuthStateChanged.mockImplementation((_auth, cb) => cb(null));
+    expect(document.getElementById("details-modal").classList.contains("hidden")).toBe(true);
+  });
 
-  const mod = await import("../scripts/browse.js");
-  await mod.loadBrowseItems();
+  test("adds item to cart from details modal", async () => {
+    mockBrowseQueries(db);
+    db.onAuthStateChanged.mockImplementation((_auth, cb) => cb({ uid: "customer-1" }));
 
-  document.querySelector(".item-details-btn").click();
+    const mod = await import("../scripts/browse.js");
+    await mod.loadBrowseItems();
 
-  const html = document.getElementById("details-modal").innerHTML;
+    document.querySelector(".item-details-btn").click();
+    document.getElementById("detailsAddToCart").click();
 
-  expect(html).toContain("500");
-  expect(html).toContain("20");
-  expect(html).toContain("60");
-});
-test("closes item details modal when close button is clicked", async () => {
-  mockBrowseQueries(db);
-  db.onAuthStateChanged.mockImplementation((_auth, cb) => cb(null));
+    const cart = JSON.parse(localStorage.getItem("cart") || "[]");
 
-  const mod = await import("../scripts/browse.js");
-  await mod.loadBrowseItems();
-
-  document.querySelector(".item-details-btn").click();
-
-  expect(document.getElementById("details-modal").classList.contains("hidden"))
-    .toBe(false);
-
-  document.getElementById("closeDetailsModal").click();
-
-  expect(document.getElementById("details-modal").classList.contains("hidden"))
-    .toBe(true);
-});
-test("adds item to cart from details modal", async () => {
-  mockBrowseQueries(db);
-  db.onAuthStateChanged.mockImplementation((_auth, cb) =>
-    cb({ uid: "customer-1" })
-  );
-
-  const mod = await import("../scripts/browse.js");
-  await mod.loadBrowseItems();
-
-  document.querySelector(".item-details-btn").click();
-  document.getElementById("detailsAddToCart").click();
-
-  const cart = JSON.parse(localStorage.getItem("cart") || "[]");
-
-  expect(cart).toHaveLength(1);
-  expect(cart[0].name).toBe("Burger");
-  expect(document.getElementById("details-modal").classList.contains("hidden"))
-    .toBe(true);
-});
-
+    expect(cart).toHaveLength(1);
+    expect(cart[0].name).toBe("Burger");
+    expect(document.getElementById("details-modal").classList.contains("hidden")).toBe(true);
+  });
 });

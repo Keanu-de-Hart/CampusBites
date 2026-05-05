@@ -325,7 +325,7 @@ async function loadMenuItems() {
 function logoutUser() {
   auth.signOut()
     .then(() => {
-      window.location.href = "login.html";
+      window.location.assign("login.html");
     })
     .catch((error) => {
       console.error("Logout failed:", error);
@@ -338,7 +338,7 @@ if (logoutBtn) {
 
 onAuthStateChanged(auth, async (user) => {
   if (!user) {
-    window.location.href = "login.html";
+    window.location.assign("login.html");
     return;
   }
 
@@ -350,7 +350,7 @@ onAuthStateChanged(auth, async (user) => {
     const userSnap = await getDoc(userRef);
 
     if (!userSnap.exists()) {
-      window.location.href = "login.html";
+      window.location.assign("login.html");
       return;
     }
 
@@ -358,13 +358,13 @@ onAuthStateChanged(auth, async (user) => {
 
     if (currentUser.role !== "admin") {
       alert("Access denied. Admins only.");
-      window.location.href = "index.html";
+      window.location.assign("index.html");
       return;
     }
 
     loadMenuItems();
   } catch (error) {
     console.error("Error checking admin access:", error);
-    window.location.href = "login.html";
+    window.location.assign("login.html");
   }
 });
