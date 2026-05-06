@@ -38,19 +38,7 @@ auth.onAuthStateChanged(async (user) => {
     }
   }
 });
-function getApprovalBadge(status = "pending") {
-  const classes = {
-    pending: "bg-yellow-100 text-yellow-800",
-    approved: "bg-green-100 text-green-800",
-    suspended: "bg-red-100 text-red-800"
-  };
 
-  return `
-    <span class="px-2 py-1 rounded-full text-xs font-semibold capitalize ${classes[status] || classes.pending}">
-      ${status}
-    </span>
-  `;
-}
 
 const views = {
 
@@ -74,24 +62,10 @@ initMenuManagement: async () => {
         </td> 
             <td class="px-6 py-4">${item.category}</td>
             <td class="px-6 py-4">R${item.price}</td>
-            <td class="px-6 py-4 space-y-2">
-                <section>
-                    ${getApprovalBadge(item.status || "pending")}
-                </section>
-
-                <section>
-                    <span class="px-2 py-1 rounded-full text-xs ${item.available ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
-                        ${item.available ? 'Available' : 'Sold Out'}
-                    </span>
-                </section>
-
-                ${
-                item.status === "suspended" && item.reviewReason
-                    ? `<p class="text-xs text-red-600 mt-2">
-                        Admin review: ${item.reviewReason}
-                    </p>`
-                    : ""
-                }
+            <td class="px-6 py-4">
+                <span class="px-2 py-1 rounded-full text-xs ${item.available ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                    ${item.available ? 'Available' : 'Sold Out'}
+                </span>
             </td>
             <td class="px-6 py-4">
                 <button onclick="views.openEditItem('${item.id}')">
@@ -230,8 +204,6 @@ saveItem: async (event) => {
         carbs,
         dietary,
         available: true,
-        status: "pending",
-        reviewReason: "",
         createdAt: serverTimestamp()
     };
     if (imageUrl) {
