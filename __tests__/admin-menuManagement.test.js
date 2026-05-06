@@ -377,4 +377,58 @@ test("handles approve failure", async () => {
 
   expect(alert).toHaveBeenCalledWith("Failed to approve menu item.");
 });
+test("handles vendor fetch error gracefully", async () => {
+  database.getDoc.mockImplementation(async (ref) => {
+    if (ref.collectionName === "users" && ref.id === "admin123") {
+      return {
+        exists: () => true,
+        data: () => ({ role: "admin" })
+      };
+    }
+
+    if (ref.collectionName === "users" && ref.id === "vendor123") {
+      throw new Error("Firestore failed");
+    }
+
+    return { exists: () => false };
+  });
+
+  await import("../scripts/admin-menuManagement.js");
+
+  await flush();
+  await flush();
+
+  expect(document.body.innerHTML).toContain("Unknown Vendor");
+});
+test("handles logout failure", async () => {
+  database.auth.signOut.mockRejectedValueOnce(new Error("logout failed"));
+
+  await import("../scripts/admin-menuManagement.js");
+
+  await flush();
+  await flush();
+
+  document.getElementById("logoutBtn").click();
+
+  await flush();
+
+  expect(console.error).toHaveBeenCalledWith(
+    "Logout failed:",
+    expect.any(Error)
+  );
+});
+test("rejects suspend when reason is only spaces", async () => {
+  prompt.mockReturnValue("   ");
+
+  await import("../scripts/admin-menuManagement.js");
+
+  await flush();
+  await flush();
+
+  document.querySelector(".suspend-btn").click();
+
+  await flush();
+
+  expect(alert).toHaveBeenCalledWith("Suspension reason is required.");
+});
 });
