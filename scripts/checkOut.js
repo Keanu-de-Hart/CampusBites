@@ -105,6 +105,10 @@ function renderOrders(orders) {
   let html = "";
 
   orders.forEach((order, index) => {
+    const formattedStatus =
+      (order.status || "Pending").charAt(0).toUpperCase() +
+      (order.status || "Pending").slice(1).toLowerCase();
+
     const itemsHtml = (order.menuItems || [])
       .map(
         (item) => `
@@ -147,7 +151,7 @@ function renderOrders(orders) {
         </td>
 
         <td class="px-6 py-4">
-          <span>${order.status || "Pending"}</span>
+          <span>${formattedStatus}</span>
 
           <p class="text-sm text-gray-500 mt-2">
           Placed: ${formatTimestamp(order.createdAt)}
