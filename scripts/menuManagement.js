@@ -204,7 +204,8 @@ saveItem: async (event) => {
         carbs,
         dietary,
         available: true,
-        createdAt: serverTimestamp()
+        status: "pending",
+        reviewReason: ""
     };
     if (imageUrl) {
      itemData.image = imageUrl;
@@ -214,7 +215,10 @@ saveItem: async (event) => {
         if (id) {
             await updateDoc(doc(db, "menu_items", id), itemData);
         } else {
-            await addDoc(collection(db, "menu_items"), itemData);
+            await addDoc(collection(db, "menu_items"), {
+                ...itemData,
+                createdAt: serverTimestamp()
+            });
         }
 
         document.getElementById('item-edit-modal').classList.add('hidden');
@@ -222,6 +226,7 @@ saveItem: async (event) => {
 
     } catch (error) {
         console.error("Error saving item:", error);
+        alert("Could not save item: " + (error.message || error));
     }
 }
 
