@@ -235,9 +235,39 @@ async function updateOrderStatus(order, status) {
   } catch(error){
     console.error(error);
     alert("Failed to cancel order");
-    
+
   }
-  
+
+}
+
+async function refundPaidOrder(order) {
+  if (!currentUser) {
+    alert("You must be signed in to cancel an order.");
+    return;
+  }
+  try {
+    const idToken = await currentUser.getIdToken();
+    const res = await fetch("/api/paystack/refund", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${idToken}`
+      },
+      body: JSON.stringify({ orderId: order.id })
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || `Refund failed (${res.status})`);
+    }
+    // The Paystack webhook will flip status/paymentStatus to "refunded"; show
+    // an interim local state so the user gets feedback immediately.
+    order.status = "refund pending";
+    renderOrders(ordersCache);
+    alert("Refund initiated. It usually clears within a few minutes.");
+  } catch (error) {
+    console.error("Refund failed:", error);
+    alert("Could not initiate refund: " + error.message);
+  }
 }
 
 // ----------------------
@@ -264,14 +294,15 @@ document.getElementById("order-table-body")?.addEventListener("click", (e) => {
     if (!order) return;
     //alert(order.status)
     if(order.status == "Pending" || order.status == "pending"){
-      updateOrderStatus(order, "cancelled");
-      
-      
-      
-      
-      
+      if (order.paymentStatus === "paid" && order.paystackReference) {
+        refundPaidOrder(order);
+      } else {
+        updateOrderStatus(order, "cancelled");
+      }
     } else if(order.status == "cancelled" || order.status == "Cancelled") {
       alert("Order is already cancelled");
+    } else if(order.status == "refunded" || order.status == "refund pending") {
+      alert("Order has already been refunded.");
     } else {
       alert("Order cannot be cancelled, it is already in progress.");
     }

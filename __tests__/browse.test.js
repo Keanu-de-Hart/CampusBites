@@ -249,7 +249,7 @@ describe("browse.js", () => {
     );
   });
 
-  test("posts cart items to PayFast and submits the returned form", async () => {
+  test("posts cart items to Paystack and redirects to authorization_url", async () => {
     mockBrowseQueries(db);
     db.onAuthStateChanged.mockImplementation((_auth, cb) =>
       cb({ uid: "customer-1" })
@@ -258,13 +258,11 @@ describe("browse.js", () => {
     const fetchMock = jest.fn().mockResolvedValue({
       ok: true,
       json: async () => ({
-        action: "https://sandbox.payfast.co.za/eng/process",
-        fields: { merchant_id: "10000100", amount: "130.00", signature: "abc" }
+        authorization_url: "https://checkout.paystack.com/abc123",
+        reference: "cb_test123"
       })
     });
     global.fetch = fetchMock;
-
-    const submitSpy = jest.spyOn(HTMLFormElement.prototype, "submit").mockImplementation(() => {});
 
     const mod = await import("../scripts/browse.js");
     await mod.loadBrowseItems();
@@ -278,7 +276,7 @@ describe("browse.js", () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(fetchMock).toHaveBeenCalledWith(
-      "/api/payfast/create-payment",
+      "/api/paystack/create-payment",
       expect.objectContaining({
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -289,23 +287,13 @@ describe("browse.js", () => {
       })
     );
 
-    const form = document.querySelector(
-      'form[action="https://sandbox.payfast.co.za/eng/process"]'
-    );
-    expect(form).toBeTruthy();
-    expect(form.method.toUpperCase()).toBe("POST");
-    expect(form.querySelector('input[name="merchant_id"]').value).toBe("10000100");
-    expect(form.querySelector('input[name="amount"]').value).toBe("130.00");
-    expect(form.querySelector('input[name="signature"]').value).toBe("abc");
-
-    expect(submitSpy).toHaveBeenCalledTimes(1);
-
+    expect(sessionStorage.getItem("cb_paystack_reference")).toBe("cb_test123");
     expect(JSON.parse(localStorage.getItem("cart") || "[]")).toEqual([]);
 
     delete global.fetch;
   });
 
-  test("sends all cart entries to PayFast even when items share a vendor", async () => {
+  test("sends all cart entries to Paystack even when items share a vendor", async () => {
     mockBrowseQueries(
       db,
       [
@@ -340,13 +328,11 @@ describe("browse.js", () => {
     const fetchMock = jest.fn().mockResolvedValue({
       ok: true,
       json: async () => ({
-        action: "https://sandbox.payfast.co.za/eng/process",
-        fields: { merchant_id: "10000100", amount: "70.00", signature: "abc" }
+        authorization_url: "https://checkout.paystack.com/xyz",
+        reference: "cb_test456"
       })
     });
     global.fetch = fetchMock;
-
-    jest.spyOn(HTMLFormElement.prototype, "submit").mockImplementation(() => {});
 
     const mod = await import("../scripts/browse.js");
     await mod.loadBrowseItems();
@@ -359,7 +345,7 @@ describe("browse.js", () => {
     await flush();
 
     expect(fetchMock).toHaveBeenCalledWith(
-      "/api/payfast/create-payment",
+      "/api/paystack/create-payment",
       expect.objectContaining({
         body: JSON.stringify({
           userId: "customer-1",
