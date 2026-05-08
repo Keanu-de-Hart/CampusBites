@@ -875,4 +875,114 @@ test("renders singular item count", async () => {
   expect(document.getElementById("numItems").textContent)
     .toBe("1 item found");
 });
+test("sorts by rating", async () => {
+  mockBrowseQueries(db);
+
+  await bootBrowse();
+
+  const sortSelect = document.getElementById("SortBy");
+  sortSelect.value = "Rating";
+  sortSelect.dispatchEvent(new Event("change"));
+
+  await flush();
+
+  const html = document.getElementById("menu").innerHTML;
+
+  expect(html.indexOf("Wrap")).toBeLessThan(html.indexOf("Pizza"));
+  expect(html.indexOf("Pizza")).toBeLessThan(html.indexOf("Burger"));
+});
+test("resets vendor filter when selected vendor no longer exists", async () => {
+  mockBrowseQueries(db);
+
+  await bootBrowse();
+
+  const vendorSelect = document.getElementById("Vendors");
+  vendorSelect.value = "Shop1";
+
+  mockBrowseQueries(db, [sampleItems[1]], [approvedVendors[1]]);
+
+  const mod = await import("../scripts/browse.js");
+  await mod.loadBrowseItems();
+
+  expect(document.getElementById("Vendors").value).toBe("AllVendors");
+});
+test("resets location filter when selected location no longer exists", async () => {
+  mockBrowseQueries(db);
+
+  await bootBrowse();
+
+  const locationSelect = document.getElementById("VendorLocations");
+  locationSelect.value = "Matrix";
+
+  mockBrowseQueries(db, [sampleItems[1]], [approvedVendors[1]]);
+
+  const mod = await import("../scripts/browse.js");
+  await mod.loadBrowseItems();
+
+  expect(document.getElementById("VendorLocations").value).toBe("AllLocations");
+});
+test("renders modal allergen tags when item has allergens", async () => {
+  mockBrowseQueries(db, [sampleItems[1]], [approvedVendors[1]]);
+
+  await bootBrowse();
+
+  document.querySelector(".item-details-btn").click();
+
+  expect(document.getElementById("details-modal").innerHTML).toContain("Gluten");
+});
+test("filters vegetarian items", async () => {
+  mockBrowseQueries(
+    db,
+    [
+      {
+        id: "40",
+        name: "Veggie Bowl",
+        vendorName: "Shop1",
+        vendorId: "vendor-1",
+        price: 35,
+        description: "Vegetarian meal",
+        category: "Mains",
+        available: true,
+        dietary: ["Vegetarian"],
+        allergens: []
+      }
+    ],
+    [approvedVendors[0]]
+  );
+
+  await bootBrowse();
+
+  const vegetarianInput = document.getElementById("Vegetarian");
+  vegetarianInput.checked = true;
+  vegetarianInput.dispatchEvent(new Event("change"));
+
+  await flush();
+
+  expect(document.getElementById("menu").innerHTML).toContain("Veggie Bowl");
+});
+test("opens cart automatically when url hash is cart", async () => {
+  mockBrowseQueries(db);
+
+  window.location.hash = "#cart";
+
+  await bootBrowse();
+
+  expect(document.getElementById("item-edit-modal").classList.contains("hidden"))
+    .toBe(false);
+  expect(document.getElementById("cartList").innerHTML)
+    .toContain("Your cart is empty.");
+
+  window.location.hash = "";
+});
+test("payfast logs error when called without logged in user", async () => {
+  mockBrowseQueries(db);
+
+  await bootBrowse();
+
+  const checkOutButton = document.getElementById("checkOut");
+
+  checkOutButton.click();
+
+  expect(alertSpy).toHaveBeenCalledWith("You must be logged in to proceed to checkout");
+});
 });
