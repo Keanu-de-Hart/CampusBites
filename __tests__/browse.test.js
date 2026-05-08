@@ -702,4 +702,91 @@ describe("browse.js", () => {
 
     expect(document.getElementById("cartList").innerHTML).toContain("Burger");
   });
+  test("shows fallback location when vendor has no location", async () => {
+  mockBrowseQueries(
+    db,
+    [
+      {
+        id: "20",
+        name: "Mystery Food",
+        vendorId: "vendor-1",
+        price: 30,
+        available: true
+      }
+    ],
+    [
+      {
+        id: "vendor-1",
+        role: "vendor",
+        status: "approved",
+        shopName: "Shop1"
+      }
+    ]
+  );
+
+  await bootBrowse();
+
+  expect(document.getElementById("menu").innerHTML)
+    .toContain("Unknown location");
+});
+test("renders fallback description when item has no description", async () => {
+  mockBrowseQueries(
+    db,
+    [
+      {
+        id: "21",
+        name: "No Description Food",
+        vendorId: "vendor-1",
+        price: 20,
+        available: true
+      }
+    ]
+  );
+
+  await bootBrowse();
+
+  expect(document.getElementById("menu").innerHTML)
+    .toContain("No description available.");
+});
+test("renders unnamed item fallback", async () => {
+  mockBrowseQueries(
+    db,
+    [
+      {
+        id: "22",
+        vendorId: "vendor-1",
+        price: 15,
+        available: true
+      }
+    ]
+  );
+
+  await bootBrowse();
+
+  expect(document.getElementById("menu").innerHTML)
+    .toContain("Unnamed Item");
+});
+test("renders empty allergens state in modal", async () => {
+  mockBrowseQueries(
+    db,
+    [
+      {
+        id: "23",
+        name: "Simple Meal",
+        vendorId: "vendor-1",
+        price: 25,
+        available: true,
+        allergens: [],
+        dietary: []
+      }
+    ]
+  );
+
+  await bootBrowse();
+
+  document.querySelector(".item-details-btn").click();
+
+  expect(document.getElementById("details-modal").innerHTML)
+    .toContain("No allergens listed.");
+});
 });
