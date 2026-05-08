@@ -789,4 +789,90 @@ test("renders empty allergens state in modal", async () => {
   expect(document.getElementById("details-modal").innerHTML)
     .toContain("No allergens listed.");
 });
+test("renders fallback vendor name", async () => {
+  mockBrowseQueries(
+    db,
+    [
+      {
+        id: "30",
+        vendorId: "vendor-1",
+        price: 10,
+        available: true
+      }
+    ],
+    [
+      {
+        id: "vendor-1",
+        role: "vendor",
+        status: "approved"
+      }
+    ]
+  );
+
+  await bootBrowse();
+
+  expect(document.getElementById("menu").innerHTML)
+    .toContain("Vendor");
+});
+test("renders default image fallback", async () => {
+  mockBrowseQueries(
+    db,
+    [
+      {
+        id: "31",
+        name: "Image Test",
+        vendorId: "vendor-1",
+        price: 20,
+        available: true
+      }
+    ]
+  );
+
+  await bootBrowse();
+
+  expect(document.getElementById("menu").innerHTML)
+    .toContain("assets/default.jpg");
+});
+test("handles empty dietary information in modal", async () => {
+  mockBrowseQueries(
+    db,
+    [
+      {
+        id: "32",
+        name: "Plain Food",
+        vendorId: "vendor-1",
+        price: 15,
+        available: true,
+        allergens: [],
+        dietary: []
+      }
+    ]
+  );
+
+  await bootBrowse();
+
+  document.querySelector(".item-details-btn").click();
+
+  expect(document.getElementById("details-modal").innerHTML)
+    .toContain("No dietary information listed.");
+});
+test("renders singular item count", async () => {
+  mockBrowseQueries(
+    db,
+    [
+      {
+        id: "33",
+        name: "Single Item",
+        vendorId: "vendor-1",
+        price: 10,
+        available: true
+      }
+    ]
+  );
+
+  await bootBrowse();
+
+  expect(document.getElementById("numItems").textContent)
+    .toBe("1 item found");
+});
 });
