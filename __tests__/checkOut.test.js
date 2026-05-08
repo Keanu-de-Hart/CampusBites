@@ -560,4 +560,37 @@ describe("checkOut.js", () => {
     expect(document.getElementById("order-table-body").innerHTML)
       .toContain("Failed to load orders.");
   });
+  test("formats created and updated timestamps in checkout orders", async () => {
+  db.onAuthStateChanged.mockImplementation((_auth, cb) => {
+    cb({ uid: "user-123" });
+  });
+
+  const fakeDate = new Date("2026-05-08T10:30:00");
+
+  db.getDocs.mockResolvedValue(
+    makeSnapshot([
+      {
+        id: "order-1",
+        userId: "user-123",
+        status: "Pending",
+        createdAt: {
+          toDate: () => fakeDate
+        },
+        updatedAt: {
+          toDate: () => fakeDate
+        },
+        menuItems: [{ name: "Burger", price: 50 }]
+      }
+    ])
+  );
+
+  require("../scripts/checkOut.js");
+  await flush();
+
+  const html = document.getElementById("order-table-body").innerHTML;
+
+  expect(html).toContain("Placed:");
+  expect(html).toContain("Updated:");
+  expect(html).not.toContain("Not available");
+});
 });
