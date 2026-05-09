@@ -676,7 +676,7 @@ describe("checkOut.js", () => {
       "Refund initiated. It usually clears within a few minutes."
     );
     expect(document.getElementById("order-table-body").innerHTML)
-      .toContain("refund pending");
+      .toContain("Refund pending");
   });
 
   test("alerts when Paystack refund request fails", async () => {
