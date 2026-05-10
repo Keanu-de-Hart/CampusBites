@@ -34,7 +34,7 @@ const flush = async () => {
 
 const setupDom = () => {
   document.body.innerHTML = `
-    <div id="auth-warning" class="hidden"></div>
+    <section id="auth-warning" class="hidden"></section>
     <span id="summary-settled"></span>
     <span id="summary-refunded"></span>
     <span id="summary-campus"></span>

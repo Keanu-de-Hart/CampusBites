@@ -45,8 +45,8 @@ describe("checkOut.js", () => {
       </table>
 
       <h3 id="modal-title"></h3>
-      <div id="item-details-modal" class="hidden"></div>
-      <div id="itemList"></div>
+      <section id="item-details-modal" class="hidden"></section>
+      <section id="itemList"></section>
       <p id="numItemsOrder"></p>
     `;
 
