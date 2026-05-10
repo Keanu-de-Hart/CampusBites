@@ -112,14 +112,14 @@ function renderOrders(orders) {
     const itemsHtml = (order.menuItems || [])
       .map(
         (item) => `
-          <div class="flex flex-col items-center text-sm">
+          <article class="flex flex-col items-center text-sm">
             <img
               src="${item.image || "assets/default.jpg"}"
               alt="${item.name || "Menu item"}"
               class="w-12 h-12 object-cover rounded-lg mb-2"
             >
             <span>${item.name || "Unnamed item"}</span>
-          </div>
+          </article>
         `
       )
       .join("");
@@ -127,9 +127,9 @@ function renderOrders(orders) {
     html += `
       <tr>
         <td class="px-6 py-4">
-          <div class="grid grid-cols-2 md:grid-cols-3 gap-3 p-4 max-w-[400px] md:max-w-[600px] place-items-center">
+          <section class="grid grid-cols-2 md:grid-cols-3 gap-3 p-4 max-w-[400px] md:max-w-[600px] place-items-center">
             ${itemsHtml}
-          </div>
+          </section>
         </td>
         <td class="px-6 py-4">
           <button
