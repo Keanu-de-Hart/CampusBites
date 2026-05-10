@@ -266,7 +266,8 @@ function redirectUser(role) {
 const uploadLogo = async (file, uid) => {
   if (!file) return null;
 
-  const storageRef = ref(storage, `vendor-logos/${uid}`);
+  const ext = file.type === "image/png" ? "png" : "jpg";
+  const storageRef = ref(storage, `vendor_logos/${uid}/logo.${ext}`);
   await uploadBytes(storageRef, file);
   return await getDownloadURL(storageRef);
 };
